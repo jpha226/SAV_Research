@@ -1,0 +1,15 @@
+xMax=12
+yMax=12
+outerRate=10
+innerRate=30
+nearRate=27
+exurban=2
+maxTrav=11
+maxTravC=7
+reportProcs=0
+saveRate=0
+readFile=0
+rseed=104
+readName=CarStatus29W.txt
+numRuns=100
+
