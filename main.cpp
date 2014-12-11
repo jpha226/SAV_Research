@@ -198,7 +198,7 @@ void saveStatus(int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxTrav
 
 void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int maxDist,  bool reportProcs,
                      int& nw, int& ne, int& se, int& sw, int& coldStart, int& hotStart);
-bool lookForCar (int x, int y, int& cn, std::vector<Car> CarMx[][yMax]);
+bool lookForCar (int x, int y, int dist, int& cn, std::vector<Car> CarMx[][yMax]);
 void assignCar (int x, int y, int c, std::vector<Car> CarMx[][yMax], Trip trp);
 Car genNewCar (Trip trp);
 void moveCar (std::vector<Car> CarMx[][yMax], int x, int y, int c, int t, int maxTrav, int& totDist, int& unoccDist, int& waitT,
@@ -539,7 +539,7 @@ void initVars (int runNum, bool warmStart)
                 for (int y = 0; y < yMax; y++)
                 {
                     CarMx[x][y].clear();
-		
+					
                 }
             }
         }
@@ -4345,12 +4345,12 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
     int numveh = 0;
     double r;
     double waitTrav = 0;
-
+    int tripDist = abs(trp.startX - trp.endX) + abs(trp.startY - trp.endY);
     bool found = false;
-
+  
     if (dist == 0)
     {
-        found = lookForCar (trp.startX, trp.startY, c, CarMx);
+        found = lookForCar (trp.startX, trp.startY, tripDist, c, CarMx);
         if (found)
         {
             assignCar(trp.startX, trp.startY, c, CarMx, trp);
@@ -4368,7 +4368,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = max(0, trp.startX - dist + d);
                 y = min(yMax - 1, trp.startY + d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist + dist, c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4380,7 +4380,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = min(xMax - 1, trp.startX + d);
                 y = min(yMax - 1, trp.startY + dist - d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist, c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4392,7 +4392,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = min(xMax - 1, trp.startX + dist - d);
                 y = max(0, trp.startY - d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist+dist,c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4404,7 +4404,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = max(0, trp.startX - d);
                 y = max(0, trp.startY - dist + d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist+dist, c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4419,7 +4419,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = min(xMax - 1, trp.startX + d);
                 y = min(yMax - 1, trp.startY + dist - d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist + dist, c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4431,7 +4431,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = min(xMax - 1, trp.startX + dist - d);
                 y = max(0, trp.startY - d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist + dist,c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4443,7 +4443,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = max(0, trp.startX - d);
                 y = max(0, trp.startY - dist + d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist + dist,c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4455,7 +4455,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = max(0, trp.startX - dist + d);
                 y = min(yMax - 1, trp.startY + d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist + dist,c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4470,7 +4470,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = min(xMax - 1, trp.startX + dist - d);
                 y = max(0, trp.startY - d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist + dist,c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4482,7 +4482,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = max(0, trp.startX - d);
                 y = max(0, trp.startY - dist + d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist + dist,c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4494,7 +4494,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = max(0, trp.startX - dist + d);
                 y = min(yMax - 1, trp.startY + d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist + dist,c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4506,7 +4506,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = min(xMax - 1, trp.startX + d);
                 y = min(yMax - 1, trp.startY + dist - d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist+dist,c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4521,7 +4521,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = max(0, trp.startX - d);
                 y = max(0, trp.startY - dist + d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist,c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4533,7 +4533,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = max(0, trp.startX - dist + d);
                 y = min(yMax - 1, trp.startY + d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist + dist,c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4545,7 +4545,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = min(xMax - 1, trp.startX + d);
                 y = min(yMax - 1, trp.startY + dist - d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist + dist,c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4557,7 +4557,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
             {
                 x = min(xMax - 1, trp.startX + dist - d);
                 y = max(0, trp.startY - d);
-                found = lookForCar (x, y, c, CarMx);
+                found = lookForCar (x, y, tripDist + dist,c, CarMx);
                 if (found && CarMx[x][y].size() > numveh)
                 {
                     assignCar(x, y, c, CarMx, trp);
@@ -4595,7 +4595,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
 }
 
 //Looks for a free car at coordinates x,y
-bool lookForCar (int x, int y, int& cn, std::vector<Car> CarMx[][yMax])
+bool lookForCar (int x, int y, int dist, int& cn, std::vector<Car> CarMx[][yMax])
 {
     int c;
     bool found = false;
@@ -4606,8 +4606,12 @@ bool lookForCar (int x, int y, int& cn, std::vector<Car> CarMx[][yMax])
     {
         if (CarMx[x][y][c].inUse == false)
         {
-            found = true;
-            cn = c;
+            if (CarMx[x][y][c].gas >= dist){
+
+	    	found = true;
+            	cn = c;
+
+	    }
         }
     }
 
@@ -6794,7 +6798,7 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
         }
 
         // determine if we need to refuel
-        if (tCar.gas < 0)
+        if (tCar.gas < 40)
         {
             tCar.refuel = 48; // Changed to 48 from 2 (wait time is now 4 hours instead of 10 minutes)
             tCar.inUse = true;
