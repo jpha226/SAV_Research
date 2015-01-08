@@ -45,13 +45,19 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define SMALL 40
 #define GREEDY 0
 #define SCRAM 1
-#define ORIGINAL 2
-#define ELECTRIC 3
+#define SAV 2
+#define SAEV 3
 
 #define SIZE SMALL
 #define ALGORITHM GREEDY
 
 #define SIMULATOR ORIGINAL
+
+/****
+* The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV.
+* The upgraded simulator for Donna Chen's research is ran as SIZE LARGE and SIMULATOR SAEV
+* Experiments for the matching algorithm change the algorithm value
+****/
 
 using namespace std;
 
@@ -95,31 +101,35 @@ const int yMax = xMax; // 40
 const int TTMxSize = 4000;
 const int CarMxSize = 500;
 const int WaitListSize = 4000;
+
 #if SIZE == LARGE
 const int numZonesL = 50;
 const int numZonesS = 100;
-#else
-const int numZonesL = 5;
-const int numZonesS = 10;
-#endif
-const int zoneSizeL = xMax / numZonesL; // 8
-const int zoneSizeS = xMax / numZonesS; // 4
-const int maxNumRuns = 1005;
-
-#if SIZE == LARGE
-const double nearDist = 30;  // 10
+const double nearDist = 30; // 10
 const double innerDist = 10;
 const int tripDistSize = 601;
 #else
+const int numZonesL = 5;
+const int numZonesS = 10;
 const double nearDist = 10;
 const double innerDist = SIZE;
 const int tripDistSize = 60;
 #endif
 
+const int zoneSizeL = xMax / numZonesL; // 8
+const int zoneSizeS = xMax / numZonesS; // 4
+const int maxNumRuns = 1005;
 const int numWarmRuns = 20; // 20
+
+#if SIMULATOR == SAV
 const int carRange = 1600;//320;
 const int refuelTime = 2; // 48
 const int refuelCheck = 0; //40
+#elif SIMULATOR == SAEV
+const int carRange = 320;
+const int refuleTime = 48;
+const int refuelCheck = 0;
+#endif
 
  long totDistRun, totUnoccDistRun, totCarsRun, totTripsRun, totHSRun, totCSRun, totWaitTRun, totUnservedTRun, totUnusedRun, totUnoccRun, maxAvailCars;
     long totWaitCountRun[6];
@@ -4682,10 +4692,10 @@ bool lookForCar (int x, int y, int dist, int& cn, std::vector<Car> CarMx[][yMax]
         if (CarMx[x][y][c].inUse == false)
         {
 
-		if (SIMULATOR == ORIGINAL){
+		if (SIMULATOR == SAV){
 			found = true;
 			cn = c;
-		} else {	
+		} else if (SIMULATOR == SAEV){	
 	        	if (CarMx[x][y][c].gas >= dist){
 				found = true;
             			cn = c;
