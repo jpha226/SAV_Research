@@ -45,9 +45,13 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define SMALL 40
 #define GREEDY 0
 #define SCRAM 1
+#define ORIGINAL 2
+#define ELECTRIC 3
 
 #define SIZE SMALL
 #define ALGORITHM GREEDY
+
+#define SIMULATOR ORIGINAL
 
 using namespace std;
 
@@ -4677,12 +4681,16 @@ bool lookForCar (int x, int y, int dist, int& cn, std::vector<Car> CarMx[][yMax]
     {
         if (CarMx[x][y][c].inUse == false)
         {
-            if (CarMx[x][y][c].gas >= dist){
 
-	    	found = true;
-            	cn = c;
-
-	    }
+		if (SIMULATOR == ORIGINAL){
+			found = true;
+			cn = c;
+		} else {	
+	        	if (CarMx[x][y][c].gas >= dist){
+				found = true;
+            			cn = c;
+			}
+		}
         }
     }
 
