@@ -51,7 +51,7 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define SIZE SMALL
 #define ALGORITHM GREEDY
 
-#define SIMULATOR ORIGINAL
+#define SIMULATOR SAV
 
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV.
@@ -94,6 +94,7 @@ struct Car
     int tripCt;
     int gas;
     int refuel;
+    int tripReqTime;
 };
 
 const int xMax = SIZE;
@@ -125,7 +126,7 @@ const int numWarmRuns = 20; // 20
 const int carRange = 1600;//320;
 const int refuelTime = 2; // 48
 const int refuelCheck = 0; //40
-#elif SIMULATOR == SAEV
+#else
 const int carRange = 320;
 const int refuleTime = 48;
 const int refuelCheck = 0;
@@ -285,7 +286,7 @@ void showWaitCars(int t, vector<Trip> waitList [6], int* waitListI, std::vector<
 
 // Functions for matching cars
 void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts);
-void smartMatchTripsToCars(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts);
+void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts);
 void assignCar (Car* c, Trip trp);
 
 
@@ -986,7 +987,7 @@ vector<Trip> waitList[6];
 		if (ALGORITHM == GREEDY)
 	                matchTripsToCarsGreedy(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
                 else
-			smartMatchTripsToCars(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
+			matchTripsToCarsScram(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
         }
 
 
@@ -1090,7 +1091,7 @@ vector<Trip> waitList[6];
 	if (ALGORITHM == GREEDY)
 		matchTripsToCarsGreedy(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 	else
-		smartMatchTripsToCars(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
+		matchTripsToCarsScram(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 
 
 // **************** New Function *****************************************************
@@ -4715,7 +4716,7 @@ void assignCar (int x, int y, int c, std::vector<Car> CarMx[][yMax], Trip trp)
     CarMx[x][y][c].destX = trp.endX;
     CarMx[x][y][c].destY = trp.endY;
     CarMx[x][y][c].tripCt ++;
-
+    CarMx[x][y][c].tripReqTime = trp.startTime;
     if (x == trp.startX && y == trp.startY)
     {
         CarMx[x][y][c].pickupX = -1;
@@ -4800,13 +4801,57 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
         }
 
         // the vehicle does not have the passenger, go to pickup location
-        unoccDist = unoccDist + abs(tCar.pickupX - tCar.x) + abs(tCar.pickupY - tCar.y);
-        totDist = totDist + abs(tCar.pickupX - tCar.x) + abs(tCar.pickupY - tCar.y);
-        waitT = waitT + abs(tCar.pickupX - tCar.x) + abs(tCar.pickupY - tCar.y);
-        trav = trav - abs(tCar.pickupX - tCar.x) - abs(tCar.pickupY - tCar.y);
-        tCar.x = tCar.pickupX;
-        tCar.y = tCar.pickupY;
+//        unoccDist = unoccDist + abs(tCar.pickupX - tCar.x) + abs(tCar.pickupY - tCar.y);
+//        totDist = totDist + abs(tCar.pickupX - tCar.x) + abs(tCar.pickupY - tCar.y);
+//        waitT = waitT + abs(tCar.pickupX - tCar.x) + abs(tCar.pickupY - tCar.y);
+//        trav = trav - abs(tCar.pickupX - tCar.x) - abs(tCar.pickupY - tCar.y);
+//        tCar.x = tCar.pickupX;
+//        tCar.y = tCar.pickupY;
+	if (tCar.pickupX != tCar.x && trav > 0)
+        {
 
+                if (trav >= abs(tCar.pickupX - tCar.x))
+                {
+                        trav = trav - abs(tCar.pickupX - tCar.x);
+                        totDist = totDist + abs(tCar.pickupX - tCar.x);
+                        unoccDist += abs(tCar.pickupX - tCar.x);
+                        waitT += abs(tCar.pickupX - tCar.x);
+                        tCar.x = tCar.pickupX;
+//                      CarMx[x][y][c].pickupX = -1;
+                        tCar.pickupX = -1;
+                } else if (tCar.pickupX > tCar.x) {
+                        tCar.x = tCar.x + trav;
+                        totDist = totDist + trav;
+                        trav = 0;
+                } else {
+                        tCar.x = tCar.x - trav;
+                        totDist = totDist + trav;
+                        trav = 0;
+                }
+        }
+
+        // move the car in the y direction
+        if (tCar.pickupY != tCar.y && trav > 0)
+        {
+                if (trav >= abs(tCar.pickupY - tCar.y))
+                {
+                        trav = trav - abs(tCar.pickupY - tCar.y);
+                        totDist = totDist + abs(tCar.pickupY - tCar.y);
+                        unoccDist += abs(tCar.pickupY - tCar.y);
+                        waitT += abs(tCar.pickupY - tCar.y);
+                        tCar.y = tCar.pickupY;
+//                      CarMx[x][y][c].pickupY = -1;
+                        tCar.pickupY = -1;
+                } else if (tCar.pickupY > tCar.y) {
+                        tCar.y = tCar.y + trav;
+                        totDist = totDist + trav;
+                        trav = 0;
+                } else {
+                        tCar.y = tCar.y - trav;
+                        totDist = totDist + trav;
+                        trav = 0;
+                }
+        }
 
     }
 
@@ -4814,6 +4859,19 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
     {
         cout << "Moving car from (" << tCar.x << "," << tCar.y << ") to (" << tCar.destX << "," << tCar.destY << ")" << endl;
         cout << "Tot dist " << totDist << endl;
+    }
+
+      if (trav > 0 || (trav == 0 && tCar.pickupX == tCar.x && tCar.pickupY == tCar.y)){
+        CarMx[x][y][c].pickupX = -1;
+        CarMx[x][y][c].pickupY = -1;
+		
+	}
+    else { // Car did not reach pick up location
+//cout << "should not be in here"<<endl;
+         unoccDist = unoccDist + trav;
+        totDist = totDist + trav;
+        waitT = waitT + trav;
+
     }
 
     // move the car in the x direction
@@ -6839,8 +6897,8 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
     Car tCar = CarMx[ox][oy][c];
     tCar.x = dx;
     tCar.y = dy;
-    tCar.pickupX = -1;
-    tCar.pickupY = -1;
+//    tCar.pickupX = -1;
+//    tCar.pickupY = -1;
     tCar.moved = true;
     tCar.inUse = true;
 
@@ -6870,7 +6928,7 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
     CarMx[ox][oy].pop_back();
     
 
-    if (dx == tCar.destX && dy == tCar.destY)
+    if (dx == tCar.destX && dy == tCar.destY && tCar.pickupX == -1 && tCar.pickupY == -1)
     {
         // we have arrived at the target location, free the car
         if (reportProcs)
@@ -7334,9 +7392,9 @@ void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool rep
 
 }
 
-void smartMatchTripsToCars(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts)
+void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts)
 {
-//      cout << "smart match" <<endl;
+
         Matching matching;
         int trpX, trpY;
         vector<Car*> cars;
@@ -7347,7 +7405,7 @@ void smartMatchTripsToCars(vector<Trip> &tripList, int time, int trav, bool repo
         for (int trp=0; trp < tripList.size(); trp++)
                 matching.addTrip(tripList[trp].startX, tripList[trp].startY, trp);
 
-//      cout << "trip list size: "<<tripList.size()<<endl;
+
         for (int x = 0; x < xMax; x++)
         {
                 for (int y = 0; y < yMax; y++)
@@ -7413,6 +7471,7 @@ void assignCar (Car* c, Trip trp)
     c->destX = trp.endX;
     c->destY = trp.endY;
     c->tripCt ++;
+    CarMx[x][y][c].tripReqTime = trp.startTime;
 
     if (c->x == trp.startX && c->y == trp.startY)
     {
