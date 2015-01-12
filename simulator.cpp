@@ -239,6 +239,7 @@ void moveCar (std::vector<Car> CarMx[][yMax], int x, int y, int c, int t, int ma
               double dwLookup [][288], int* timeTripCounts, bool reportProcs, int& hotStarts, int& coldStarts, int& trackX, int& trackY, int& trackC);
 void move (std::vector<Car> CarMx[][yMax], int ox, int oy, int dx, int dy, int c, int t, double dwLookup [][288], int* timeTripCounts,
            bool reportProcs, int& hotStart, int& coldStart, int& trackX, int& trackY, int& trackC);
+int getCarTrav(int x, int y, int t);
 void genRetTrip (int ox, int oy, int dx, int dy, int t, double dwLookup [][288],  int* timeTripCounts);
 void randOrdering(int* xRandOrd, int numVals);
 void runSummary(bool warmStart, bool lastWarm, int zoneGen[][numZonesL], int waitZones[][numZonesL], double netZoneBalance[][numZonesL], int tripO[][numZonesL], int tripD[][numZonesL],
@@ -1196,6 +1197,7 @@ vector<Trip> waitList[6];
                 {
                     if (CarMx[x][y][c].inUse && !CarMx[x][y][c].moved)
                     {
+			//trav = getCarTrav(x,y,t);
                         moveCar (CarMx,  x, y, c, t, trav, totDist, unoccDist, waitT, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                  trackX, trackY, trackC);
                         c--;
@@ -1203,7 +1205,7 @@ vector<Trip> waitList[6];
                 }
             }
         }
-
+	
         tempCarOcc = 0;
 
 // update max # of occupied cars
@@ -4857,9 +4859,9 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
         }
 
     }
-	if (tCar.pickupX != -1)
-	if (tCar.pickupX != tCar.currTrip->startX)
-		cout << "problem: "<< tCar.pickupX << " to start at "<< tCar.currTrip->startX<<endl;
+//	if (tCar.pickupX != -1)
+//	if (tCar.pickupX != tCar.currTrip->startX)
+//		cout << "problem: "<< tCar.pickupX << " to start at "<< tCar.currTrip->startX<<endl;
 
     if (reportProcs)
     {
@@ -6969,6 +6971,36 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
     
 
     return;
+
+}
+
+int getCarTrav(int x, int y, int t){
+
+	float r = sqrt(pow(x - (xMax / 2),2) + pow (y - (yMax / 2),2));
+	int trav;
+
+	// assume congested speeds between 7-8 AM and 4-6:30 PM
+        if (((t >= 84) && (t <= 96)) || ((t >= 192) && (t <= 222))){
+        	if (r < 20)
+			trav = 5;
+		else if (r < 60)
+			trav = 8;
+		else if (r < 120)
+			trav = 10;
+		else
+			trav = 12;
+        } else {
+        	 if (r < 20)
+                        trav = 5;
+                else if (r < 60)
+                        trav = 8;
+                else if (r < 120)
+                        trav = 11;
+                else
+                        trav = 12;
+        }
+
+	return trav;
 
 }
 
