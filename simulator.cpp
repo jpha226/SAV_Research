@@ -1061,8 +1061,8 @@ vector<Trip> waitList[6];
 				
 				if (waitList[w][i].waitPtr != NULL)
 					nCar.currTrip = waitList[w][i].waitPtr;
-				else// if (&waitList[w][i] == NULL)
-					cout << "NULL problema"<<endl;
+//				else
+//					cout << "NULL problema"<<endl;
 	                        cn = CarMx[nCar.x][nCar.y].size();
         	                CarMx [nCar.x][nCar.y].push_back(nCar);
 				
@@ -1165,8 +1165,8 @@ vector<Trip> waitList[6];
                     if (CarMx[x][y][c].inUse && !CarMx[x][y][c].moved)
                     {
 			//trav = getCarTrav(x,y,t);
-			if (CarMx[x][y][c].currTrip == NULL && CarMx[x][y][c].refuel == 0 && CarMx[x][y][c].pickupX == -1)
-				cout << "Problem Car: "<<&CarMx[x][y][c]<<endl;
+//			if (CarMx[x][y][c].currTrip == NULL && CarMx[x][y][c].refuel == 0 && CarMx[x][y][c].pickupX == -1)
+//				cout << "Problem Car: "<<&CarMx[x][y][c]<<endl;
                         moveCar (CarMx,  x, y, c, t, trav, totDist, unoccDist, waitT, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                  trackX, trackY, trackC);
                         c--;
@@ -1271,7 +1271,7 @@ vector<Trip> waitList[6];
                         if (CarMx[x][y][c].refuel == 0)
                         {
                             CarMx[x][y][c].inUse = false;
-			    CarMx[x][y][c].currTrip = NULL;
+//			    CarMx[x][y][c].currTrip = NULL;
                         }
                     }
                 }
@@ -1346,7 +1346,7 @@ void placeInitCars (std::vector<Car> CarMx[][yMax],   int* timeTripCounts, doubl
                 CarMx[x][y][c].destY = CarMx[x][y][c].y;
                 CarMx[x][y][c].returnHome = false;
                 CarMx[x][y][c].tripCt = 0;
-		CarMx[x][y][c].currTrip = NULL;
+//		CarMx[x][y][c].currTrip = NULL;
             }
         }
     }
@@ -4852,10 +4852,6 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
 
 	CarMx[x][y][c].pickupX = -1;
         CarMx[x][y][c].pickupY = -1;
-	if (CarMx[x][y][c].refuel == 0)
-	if (CarMx[x][y][c].currTrip == NULL)
-//	if (tCar.currTrip->waitTime == wait)
-		cout << "NULL Trip"<<endl;
 
 	}
     else { // Car did not reach pick up location
@@ -6883,7 +6879,7 @@ double findMoveDist(int origX, int origY, int direct, int zoneEdge, int maxTrav,
 void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int c, int t, double dwLookup [][288],
            int* timeTripCounts, bool reportProcs, int& hotStart, int& coldStart, int& trackX, int& trackY, int& trackC)
 {
-
+//	bool flag = (CarMx[ox][oy][c].currTrip != NULL);
 
     // identify target car in the car matrix the car will now have picked up passengers and will have moved by the end of this function
     Car tCar = CarMx[ox][oy][c];
@@ -6928,7 +6924,7 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
             cout << "Arrived! Releasing car." << endl;
         }
         tCar.inUse = false;
-	tCar.currTrip = NULL;
+//	tCar.currTrip = NULL;
         // generate a return trip, if slated
         if (tCar.returnHome == true)
         {
@@ -6953,6 +6949,10 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
     tCar.tElapsed = 0;
     CarMx[dx][dy].push_back(tCar);
     
+//	if(flag)
+//		if (CarMx[dx][dy][CarMx[dx][dy].size() - 1].currTrip == NULL)
+//			cout << "Changed" <<endl;
+
 
     return;
 
