@@ -47,12 +47,14 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define SCRAM 1
 #define SAV 2
 #define SAEV 3
+#define MERGE 4
+#define SEPARATE 5
 
 #define SIZE SMALL
 #define ALGORITHM GREEDY
 
 #define SIMULATOR SAV
-
+#define WAIT SEPARATE
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV.
 * The upgraded simulator for Donna Chen's research is ran as SIZE LARGE and SIMULATOR SAEV
@@ -319,7 +321,7 @@ float time_diff, seconds;
             }
             if (!readFile || wStart) // run sharedAV if not restoring a previous run or if continuing a previous run still on warm start
             {
-		cout << "About to run program"<<endl;
+		cout << "About to run program: "<< i << endl;
               t1 = clock();
 		  runSharedAV (timeTripCounts, CarMx, maxTrav, maxTravC,  dwLookup, zoneSharesL, zoneSharesS, maxCarUse, maxCarOcc, totDist, unoccDist,
                              waitT, reportProcs, saveRate, true, false, maxAvailCars, readFile, startIter, unservedT, waitCount, hotStarts, coldStarts, numRuns);
@@ -898,7 +900,7 @@ vector<Trip> waitList[6];
 
     for (t = startT; t < 288; t++)
     {
-
+	
         carCt = 0;
         for (int xc = 0; xc < xMax; xc++)
         {
@@ -983,152 +985,117 @@ vector<Trip> waitList[6];
             cout << "Finding cars" << endl;
         }
 
-        for (int w = 5; w>= 0; w--)
-        {
+	// MERGE HERE
+/*	if (WAIT == MERGE){
+
+		vector<Trip> mergedWaitList;
+
+		for ( int w = 5; w >= 0; w--){
+			for (int i=0; i<waitList[w].size(); i++)
+				mergedWaitList.push_back(waitList[w][i]);
+		}
+		for (int i=0; i<TTMx[t].size(); i++)
+			mergedWaitList.push_back(TTMx[t][i]);
+
 		if (ALGORITHM == GREEDY)
-	                matchTripsToCarsGreedy(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
-                else
-			matchTripsToCarsScram(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
-        }
+			matchTripsToCarsGreedy(mergedWaitList, t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
+		else
+			matchTripsToCarsScram(mergedWaitList, t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
+
+	} else {	*/
+
+        	for (int w = 5; w>= 0; w--)
+        	{
+			if (ALGORITHM == GREEDY)
+	                	matchTripsToCarsGreedy(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
+                	else
+				matchTripsToCarsScram(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
+	        }
+
+		
 
 
-/************* New Function *****************
- for all waitlisted trips from previous time period, find the nearest car
-        for (int w = 5; w >= 0; w--)
-        {
-            for (int d = 0; d < trav; d++)
-            {
-                for (int i = 0; i < waitListI[w]; i++)
-                {
-                    if (waitList[w][i].carlink == false)
-                    {
-			findNearestCar(waitList[w][i], CarMx, d, trav,  reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
-                    }
-                }
-            }
-        }
-************************************************/
+		// initialize wait zones
+        	for (int x = 0; x < numZonesL; x++)
+        	{
+            		for (int y = 0; y < numZonesL; y++)
+            		{
+                		waitZonesTL[x][y] = 0;
+            		}
+        	}
 
+        	for (int x = 0; x < numZonesS; x++)
+        	{
+            		for (int y = 0; y < numZonesS; y++)
+            		{
+	                	waitZonesTS[x][y] = 0;
+        	    }
+        	}
 
-// initialize wait zones
-        for (int x = 0; x < numZonesL; x++)
-        {
-            for (int y = 0; y < numZonesL; y++)
-            {
-                waitZonesTL[x][y] = 0;
-            }
-        }
+	        totNumCars = 0;
+        	for (int x = 0; x < xMax; x++)
+	        {
+        	    for (int y = 0; y < yMax; y++)
+            		{
+                	totNumCars = totNumCars + CarMx[x][y].size();
+            		}
+        	}
 
-        for (int x = 0; x < numZonesS; x++)
-        {
-            for (int y = 0; y < numZonesS; y++)
-            {
-                waitZonesTS[x][y] = 0;
-            }
-        }
+		// for all unserved waitlisted trips, move them to the next waitlist period.  Those waiting longer than 30 minutes are unserved.
 
+	        for (int w = 5; w >= 0; w--)
+        	{
+           		waitCount[w] = waitCount[w] + waitListI[w];
 
-        totNumCars = 0;
-        for (int x = 0; x < xMax; x++)
-        {
-            for (int y = 0; y < yMax; y++)
-            {
-                totNumCars = totNumCars + CarMx[x][y].size();
-            }
-        }
-
-// for all unserved waitlisted trips, move them to the next waitlist period.  Those waiting longer than 30 minutes are unserved.
-
-        for (int w = 5; w >= 0; w--)
-        {
-//            if (waitListI[0] > 0)
-//            {
-//                reportProcs = false;
-//            }
-
-           waitCount[w] = waitCount[w] + waitListI[w];
-
-            for (int i = 0; i < waitListI[w]; i++)
-            {
-                if (waitList[w][i].carlink == false)
-                {
+	            for (int i = 0; i < waitListI[w]; i++)
+        	    {
+                	if (waitList[w][i].carlink == false)
+	                {
 
 //                    if (warmStart && totNumCars < 1500)
-                    if ((warmStart && !lastWarm) || (lastWarm && totNumCars < maxAvailCars))
-                    {
+	                    if ((warmStart && !lastWarm) || (lastWarm && totNumCars < maxAvailCars))
+        	            {
                         // generate a new car
-                        newCarCt ++;
-                        nCar = genNewCar (waitList[w][i]);
-                        cn = CarMx[nCar.x][nCar.y].size();
-                        CarMx [nCar.x][nCar.y].push_back(nCar);
+                	        newCarCt ++;
+                        	nCar = genNewCar (waitList[w][i]);
+				
+				if (waitList[w][i].waitPtr != NULL)
+					nCar.currTrip = waitList[w][i].waitPtr;
+				else// if (&waitList[w][i] == NULL)
+					cout << "NULL problema"<<endl;
+	                        cn = CarMx[nCar.x][nCar.y].size();
+        	                CarMx [nCar.x][nCar.y].push_back(nCar);
+				
+                	        zoneGen[nCar.x / zoneSizeL][nCar.y / zoneSizeL]++;
 
-                        zoneGen[nCar.x / zoneSizeL][nCar.y / zoneSizeL]++;
+                        	totNumCars++;
+                    	     }
 
-                        totNumCars++;
-                    }
+	                    else if (w == 5)
+        	            {
+                	        unservedT++;
+	                    } else {
+        	                // move car to the next wait time interval
+                	        waitList[w][i].waitTime = waitList[w][i].waitTime + 5;
+                        	waitZonesTL[waitList[w][i].startX / zoneSizeL][waitList[w][i].startY / zoneSizeL]++;
+	                        waitZonesTS[waitList[w][i].startX / zoneSizeS][waitList[w][i].startY / zoneSizeS]++;
+        	                //waitList[waitListI[w+1]][w+1] = waitList[i][w];
+                	        waitList[w+1].push_back(waitList[w][i]);
+				waitListI[w+1]++;
+                    	    }
 
-                    else if (w == 5)
-                    {
-                        unservedT++;
-                    } else {
-                        // move car to the next wait time interval
-                        waitList[w][i].waitTime = waitList[w][i].waitTime + 5;
-                        waitZonesTL[waitList[w][i].startX / zoneSizeL][waitList[w][i].startY / zoneSizeL]++;
-                        waitZonesTS[waitList[w][i].startX / zoneSizeS][waitList[w][i].startY / zoneSizeS]++;
-                        //waitList[waitListI[w+1]][w+1] = waitList[i][w];
-                        waitList[w+1].push_back(waitList[w][i]);
-			waitListI[w+1]++;
-                    }
-			if(waitList[w][i].startX>=xMax)
-				cout <<"About to exceed in move"<<endl;
-                }
-            }
-            waitListI[w] = 0;
-	    waitList[w].clear();
-        }
-
-
-//	Scram(TTMx[t],trav);
-	if (ALGORITHM == GREEDY)
-		matchTripsToCarsGreedy(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
-	else
-		matchTripsToCarsScram(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
-
-
-// **************** New Function *****************************************************
-// for all trips, find the nearest car
-       /* for (int d = 0; d < trav; d++)
-        {
-
-            if (t % 2 == 0) // iterate forwards through timetrip counts and then backwards every other interval in order to ensure equal generation for new cars
-            {
-                for (int trp = 0; trp < timeTripCounts[t]; trp++)
-                {
-                    if (TTMx[t][trp].carlink == false)
-                    {
-                        if (reportProcs)
-                        {
-                            cout << "Trip " << trp << " at distance " << d << endl;
-                        }
-                        findNearestCar(TTMx[t][trp], CarMx, d, trav,  reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
-                    }
-                }
-            } else {
-                for (int trp = timeTripCounts[t] - 1; trp >= 0; trp--)
-                {
-                    if (TTMx[t][trp].carlink == false)
-                    {
-                        if (reportProcs)
-                        {
-                            cout << "Trip " << trp << " at distance " << d << endl;
-                        }
-                        findNearestCar(TTMx[t][trp], CarMx, d, trav,  reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
-                    }
-                }
-            }
-        }*/
-// **************************************************************************************
-
+                	  }
+            		}
+	            waitListI[w] = 0;
+		    waitList[w].clear();
+		  }
+	
+		if (ALGORITHM == GREEDY)
+			matchTripsToCarsGreedy(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
+		else
+			matchTripsToCarsScram(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
+	
+//	} // End Separate Part Here
 
 // for each trip that hasn't found a car, create a new one if in warm start or put on the wait list if running normal run
         for (int trp = 0; trp < timeTripCounts[t]; trp++)
@@ -1198,6 +1165,8 @@ vector<Trip> waitList[6];
                     if (CarMx[x][y][c].inUse && !CarMx[x][y][c].moved)
                     {
 			//trav = getCarTrav(x,y,t);
+			if (CarMx[x][y][c].currTrip == NULL && CarMx[x][y][c].refuel == 0 && CarMx[x][y][c].pickupX == -1)
+				cout << "Problem Car: "<<&CarMx[x][y][c]<<endl;
                         moveCar (CarMx,  x, y, c, t, trav, totDist, unoccDist, waitT, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                  trackX, trackY, trackC);
                         c--;
@@ -1302,6 +1271,7 @@ vector<Trip> waitList[6];
                         if (CarMx[x][y][c].refuel == 0)
                         {
                             CarMx[x][y][c].inUse = false;
+			    CarMx[x][y][c].currTrip = NULL;
                         }
                     }
                 }
@@ -1376,6 +1346,7 @@ void placeInitCars (std::vector<Car> CarMx[][yMax],   int* timeTripCounts, doubl
                 CarMx[x][y][c].destY = CarMx[x][y][c].y;
                 CarMx[x][y][c].returnHome = false;
                 CarMx[x][y][c].tripCt = 0;
+		CarMx[x][y][c].currTrip = NULL;
             }
         }
     }
@@ -4301,7 +4272,9 @@ int getDestDist(double* tripDist)
 // places trips in the time-trip matrix
 void placeInTTM ( Trip ntrip, int* timeTripCounts, int time)
 {
+    
     TTMx[time].push_back(ntrip);
+//    TTMx[time][TTMx[time].size() - 1].waitPtr = &TTMx[time][TTMx[time].size() - 1];
     timeTripCounts[time]++;
 	if(TTMx[time].size() != timeTripCounts[time])
 		cout << "Trip # (vec first): " << TTMx[time].size() << " = " << timeTripCounts[time] << " ?"<<endl;
@@ -4715,12 +4688,15 @@ bool lookForCar (int x, int y, int dist, int& cn, std::vector<Car> CarMx[][yMax]
 void assignCar (int x, int y, int c, std::vector<Car> CarMx[][yMax], Trip* trp)
 {
     double randRet;
-
+   
     CarMx[x][y][c].inUse = true;
     CarMx[x][y][c].destX = trp->endX;
     CarMx[x][y][c].destY = trp->endY;
     CarMx[x][y][c].tripCt ++;    
-    CarMx[x][y][c].currTrip = trp;
+    if (trp->waitPtr != NULL)
+      CarMx[x][y][c].currTrip = trp->waitPtr;
+    else
+      CarMx[x][y][c].currTrip = trp;
 
     if (x == trp->startX && y == trp->startY)
     {
@@ -4793,10 +4769,11 @@ Car genNewCar (Trip trp)
 void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int maxTrav, int& totDist, int& unoccDist, int& waitT,
               double dwLookup [][288], int* timeTripCounts, bool reportProcs, int& hotStarts, int& coldStarts, int& trackX, int& trackY, int& trackC)
 {
+    
     // identify target car in the car matrix
     Car tCar = CarMx[x][y][c];
     int trav = maxTrav;
-
+    float wait; 
     if (tCar.pickupX != -1 && tCar.pickupY != -1)
     {
         if (reportProcs)
@@ -4804,7 +4781,7 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
             cout << "Pickup: Moving car from (" << tCar.x << "," << tCar.y << ") to (" << tCar.pickupX << "," << tCar.pickupY << ")" << endl;
             cout << "Tot dist " << totDist << endl;
         }
-
+	wait = t - tCar.currTrip->startTime;
         // the vehicle does not have the passenger, go to pickup location
 //        unoccDist = unoccDist + abs(tCar.pickupX - tCar.x) + abs(tCar.pickupY - tCar.y);
 //        totDist = totDist + abs(tCar.pickupX - tCar.x) + abs(tCar.pickupY - tCar.y);
@@ -4870,9 +4847,16 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
     }
 
       if (trav > 0 || (trav == 0 && tCar.pickupX == tCar.x && tCar.pickupY == tCar.y)){
-        CarMx[x][y][c].pickupX = -1;
+
+	wait += (1.0 * abs(tCar.pickupX - tCar.x) + abs(tCar.pickupY - tCar.y)) / trav;        
+
+	CarMx[x][y][c].pickupX = -1;
         CarMx[x][y][c].pickupY = -1;
-		
+	if (CarMx[x][y][c].refuel == 0)
+	if (CarMx[x][y][c].currTrip == NULL)
+//	if (tCar.currTrip->waitTime == wait)
+		cout << "NULL Trip"<<endl;
+
 	}
     else { // Car did not reach pick up location
 //cout << "should not be in here"<<endl;
@@ -7510,7 +7494,12 @@ void assignCar (Car* c, Trip* trp)
     c->destX = trp->endX;
     c->destY = trp->endY;
     c->tripCt ++;
-//    c->currTrip = &trp;
+
+    if (trp->waitPtr != NULL)
+      c->currTrip = trp->waitPtr;
+    else
+      c->currTrip = trp;
+
 
     if (c->x == trp->startX && c->y == trp->startY)
     {
