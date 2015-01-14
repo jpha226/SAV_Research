@@ -1059,14 +1059,17 @@ vector<Trip> waitList[6];
                 	        newCarCt ++;
                         	nCar = genNewCar (waitList[w][i]);
 				
-				if (waitList[w][i].waitPtr != NULL)
-					nCar.currTrip = waitList[w][i].waitPtr;
-//				else
-//					cout << "NULL problema"<<endl;
+//				if (waitList[w][i].waitPtr != NULL)
+				waitList[w][i].waitPtr->carlink = true;
+				if(t==4)
+					cout << "hey"<<endl;
 	                        cn = CarMx[nCar.x][nCar.y].size();
         	                CarMx [nCar.x][nCar.y].push_back(nCar);
-				
+				CarMx[nCar.x][nCar.y][cn].currTrip = waitList[w][i].waitPtr;				
                 	        zoneGen[nCar.x / zoneSizeL][nCar.y / zoneSizeL]++;
+				
+				if (waitList[w][i].waitPtr == &TTMx[3][0])
+					cout << "hallelujah"<<endl;
 
                         	totNumCars++;
                     	     }
@@ -1124,6 +1127,10 @@ vector<Trip> waitList[6];
 
                     waitZonesTL[TTMx[t][trp].startX / zoneSizeL][TTMx[t][trp].startY / zoneSizeL]++;
                     waitZonesTS[TTMx[t][trp].startX / zoneSizeS][TTMx[t][trp].startY / zoneSizeS]++;
+			
+		 if (t==3 && trp == 0)
+	                cout << "Heiii boii"<<endl;
+
 
                     TTMx[t][trp].waitTime = 5;
 			waitList[0].push_back(TTMx[t][trp]);
@@ -4639,8 +4646,10 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
         {
             trp.waitPtr -> waitTime = trp.waitTime;
         }
-	//CarMx[x][y][c].currTrip = &trp;
-	
+	if (trp.waitPtr == &TTMx[3][0])
+		cout << "Hallellujah Brother! "<<waitTrav<<endl;	
+	else if (&trp == &TTMx[3][0])
+		cout << "actual trip" << endl;
     }
 
     if (reportProcs)
@@ -4773,15 +4782,15 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
     // identify target car in the car matrix
     Car tCar = CarMx[x][y][c];
     int trav = maxTrav;
-    float wait; 
-    if (tCar.pickupX != -1 && tCar.pickupY != -1)
+    double wait; 
+    if (tCar.pickupX != -1 || tCar.pickupY != -1)
     {
         if (reportProcs)
         {
             cout << "Pickup: Moving car from (" << tCar.x << "," << tCar.y << ") to (" << tCar.pickupX << "," << tCar.pickupY << ")" << endl;
             cout << "Tot dist " << totDist << endl;
         }
-	wait = t - tCar.currTrip->startTime;
+
         // the vehicle does not have the passenger, go to pickup location
 //        unoccDist = unoccDist + abs(tCar.pickupX - tCar.x) + abs(tCar.pickupY - tCar.y);
 //        totDist = totDist + abs(tCar.pickupX - tCar.x) + abs(tCar.pickupY - tCar.y);
@@ -4800,7 +4809,7 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
                         waitT += abs(tCar.pickupX - tCar.x);
                         tCar.x = tCar.pickupX;
 //                      CarMx[x][y][c].pickupX = -1;
-                        tCar.pickupX = -1;
+           //             tCar.pickupX = -1;
                 } else if (tCar.pickupX > tCar.x) {
                         tCar.x = tCar.x + trav;
                         totDist = totDist + trav;
@@ -4823,7 +4832,7 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
                         waitT += abs(tCar.pickupY - tCar.y);
                         tCar.y = tCar.pickupY;
 //                      CarMx[x][y][c].pickupY = -1;
-                        tCar.pickupY = -1;
+         //               tCar.pickupY = -1;
                 } else if (tCar.pickupY > tCar.y) {
                         tCar.y = tCar.y + trav;
                         totDist = totDist + trav;
@@ -4836,9 +4845,6 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
         }
 
     }
-//	if (tCar.pickupX != -1)
-//	if (tCar.pickupX != tCar.currTrip->startX)
-//		cout << "problem: "<< tCar.pickupX << " to start at "<< tCar.currTrip->startX<<endl;
 
     if (reportProcs)
     {
@@ -4848,14 +4854,27 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
 
       if (trav > 0 || (trav == 0 && tCar.pickupX == tCar.x && tCar.pickupY == tCar.y)){
 
-	wait += (1.0 * abs(tCar.pickupX - tCar.x) + abs(tCar.pickupY - tCar.y)) / trav;        
+	// If car is not refueling and at pick up location
+	if (tCar.refuel == 0 && tCar.x == tCar.currTrip->startX && tCar.y == tCar.currTrip->startY){
+		double waitTrav = abs(tCar.currTrip->startX - x) + abs(tCar.currTrip->startY - y);
+		wait = 5 * (t - tCar.currTrip->startTime);
+		wait +=  (5 * waitTrav / maxTrav);
+		
+		if (abs(wait - CarMx[x][y][c].currTrip->waitTime) >= 0.0001){
+			cout << "Time: " << tCar.currTrip->startTime << " " << t <<endl;
+			cout << "Wait time error: " << wait << " " << CarMx[x][y][c].currTrip->waitTime<<endl;
+			cout << "Wait Trav: "<<waitTrav<< " over "<< maxTrav<<endl;
+			cout << "Car at: "<<x<<","<<y<<" Trip start: "<<tCar.currTrip->startX<<","<<tCar.currTrip->startY<<endl;
+			cout << "Travel: "<<trav<<endl;
+		}
+	}
 
 	CarMx[x][y][c].pickupX = -1;
         CarMx[x][y][c].pickupY = -1;
 
 	}
     else { // Car did not reach pick up location
-//cout << "should not be in here"<<endl;
+cout << "should not be in here"<<endl;
          unoccDist = unoccDist + trav;
         totDist = totDist + trav;
         waitT = waitT + trav;
@@ -6879,7 +6898,7 @@ double findMoveDist(int origX, int origY, int direct, int zoneEdge, int maxTrav,
 void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int c, int t, double dwLookup [][288],
            int* timeTripCounts, bool reportProcs, int& hotStart, int& coldStart, int& trackX, int& trackY, int& trackC)
 {
-//	bool flag = (CarMx[ox][oy][c].currTrip != NULL);
+
 
     // identify target car in the car matrix the car will now have picked up passengers and will have moved by the end of this function
     Car tCar = CarMx[ox][oy][c];
@@ -6924,7 +6943,7 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
             cout << "Arrived! Releasing car." << endl;
         }
         tCar.inUse = false;
-//	tCar.currTrip = NULL;
+
         // generate a return trip, if slated
         if (tCar.returnHome == true)
         {
@@ -6948,11 +6967,6 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
     }
     tCar.tElapsed = 0;
     CarMx[dx][dy].push_back(tCar);
-    
-//	if(flag)
-//		if (CarMx[dx][dy][CarMx[dx][dy].size() - 1].currTrip == NULL)
-//			cout << "Changed" <<endl;
-
 
     return;
 
@@ -7403,6 +7417,8 @@ void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool rep
 
                         for (int i = tripList.size() - 1; i >= 0; i--)
                         {
+				if(i==0 && time ==3)
+					cout<< " matching?"<<endl;
                                 if (tripList[i].carlink == false)
                                 {
                                         findNearestCar(tripList[i], CarMx, d, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
