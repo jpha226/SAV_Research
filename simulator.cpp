@@ -831,7 +831,8 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
     int passCarNum;
     int saveCtr = saveRate;
     int t, startT, trav, carCt, totNumCars;
-vector<Trip> waitList[6];
+    vector<Trip> waitList[6];
+    vector<Trip> mergedTripList;
 //    Trip waitList [WaitListSize][6]; // wait list
     int waitListI[6]; // wait list index
 
@@ -957,9 +958,6 @@ vector<Trip> waitList[6];
             trav = maxTrav;
         }
 	
-// cout << "moving" << endl;
-
-
 // determine number of cars currently active & currently waiting
         if (reportProcs)
         {
@@ -988,14 +986,16 @@ vector<Trip> waitList[6];
 	// MERGE HERE
 	if (WAIT == MERGE && !warmStart){
 
-		vector<Trip> mergedTripList;
+		mergedTripList.clear();
 
 		for ( int w = 5; w >= 0; w--){
 			for (int i=0; i<waitList[w].size(); i++)
 				mergedTripList.push_back(waitList[w][i]);
 		}
-		for (int i=0; i<TTMx[t].size(); i++)
+		for (int i=0; i<TTMx[t].size(); i++){
 			mergedTripList.push_back(TTMx[t][i]);
+			mergedTripList[mergedTripList.size() - 1].waitPtr = &TTMx[t][i];
+		}
 
 		if (ALGORITHM == GREEDY)
 			matchTripsToCarsGreedy(mergedTripList, t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
@@ -1009,6 +1009,32 @@ vector<Trip> waitList[6];
 			waitListI[w] = 0;
 		}
 
+		// initialize wait zones
+                for (int x = 0; x < numZonesL; x++)
+                {
+                        for (int y = 0; y < numZonesL; y++)
+                        {
+                                waitZonesTL[x][y] = 0;
+                        }
+                }
+
+                for (int x = 0; x < numZonesS; x++)
+                {
+                        for (int y = 0; y < numZonesS; y++)
+                        {
+                                waitZonesTS[x][y] = 0;
+                    }
+                }
+
+                totNumCars = 0;
+                for (int x = 0; x < xMax; x++)
+                {
+                    for (int y = 0; y < yMax; y++)
+                        {
+                        totNumCars = totNumCars + CarMx[x][y].size();
+                        }
+                }
+
 		// Add Trips to waitList
 		for (int i=0; i < mergedTripList.size(); i++)
 		{
@@ -1018,6 +1044,12 @@ vector<Trip> waitList[6];
 				if (t - mergedTripList[i].startTime < 6){
 					waitList[t - mergedTripList[i].startTime].push_back(mergedTripList[i]);
 					waitListI[t - mergedTripList[i].startTime]++;
+					
+					   // move car to the next wait time interval
+	                                //waitList[w][i].waitTime = waitList[w][i].waitTime + 5;
+        	                        waitZonesTL[mergedTripList[i].startX / zoneSizeL][mergedTripList[i].startY / zoneSizeL]++;
+                	                waitZonesTS[mergedTripList[i].startX / zoneSizeS][mergedTripList[i].startY / zoneSizeS]++;
+
 				}
 				else
 					unservedT++;
@@ -1033,9 +1065,6 @@ vector<Trip> waitList[6];
                 	else
 				matchTripsToCarsScram(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 	        }
-
-		
-
 
 		// initialize wait zones
         	for (int x = 0; x < numZonesL; x++)
@@ -1089,9 +1118,6 @@ vector<Trip> waitList[6];
         	                CarMx [nCar.x][nCar.y].push_back(nCar);
 				CarMx[nCar.x][nCar.y][cn].currTrip = waitList[w][i].waitPtr;				
                 	        zoneGen[nCar.x / zoneSizeL][nCar.y / zoneSizeL]++;
-				
-//				if (waitList[w][i].waitPtr == &TTMx[3][0])
-//					cout << "hallelujah"<<endl;
 
                         	totNumCars++;
                     	     }
@@ -1120,8 +1146,7 @@ vector<Trip> waitList[6];
 		else
 			matchTripsToCarsScram(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 	
-	} // End Separate Part Here
-
+	
 // for each trip that hasn't found a car, create a new one if in warm start or put on the wait list if running normal run
         for (int trp = 0; trp < timeTripCounts[t]; trp++)
         {
@@ -1156,9 +1181,9 @@ vector<Trip> waitList[6];
                     waitList[0][waitListI[0]].waitPtr = &TTMx[t][trp];
                     waitListI[0]++;
          	}
-	     //}
-        }
-
+	     
+           }
+	} // End SEPARATE part here
         // update cumulative waitZones balance with single iteration waitZonesT
         for (int x = 0; x < numZonesL; x++)
         {
