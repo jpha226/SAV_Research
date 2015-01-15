@@ -50,13 +50,13 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define MERGE 4
 #define SEPARATE 5
 
-#define SIZE SMALL
-#define ALGORITHM GREEDY
+#define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
+#define ALGORITHM GREEDY // Matching is done with either the original greedy approach or SCRAM
 
-#define SIMULATOR SAV
-#define WAIT SEPARATE
+#define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
+#define WAIT SEPARATE // Refers to giving all unmatched trip equal priority or separate
 /****
-* The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV.
+* The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV and WAIT as SEPARATE.
 * The upgraded simulator for Donna Chen's research is ran as SIZE LARGE and SIMULATOR SAEV
 * Experiments for the matching algorithm change the algorithm value
 ****/
@@ -986,23 +986,45 @@ vector<Trip> waitList[6];
         }
 
 	// MERGE HERE
-/*	if (WAIT == MERGE){
+	if (WAIT == MERGE && !warmStart){
 
-		vector<Trip> mergedWaitList;
+		vector<Trip> mergedTripList;
 
 		for ( int w = 5; w >= 0; w--){
 			for (int i=0; i<waitList[w].size(); i++)
-				mergedWaitList.push_back(waitList[w][i]);
+				mergedTripList.push_back(waitList[w][i]);
 		}
 		for (int i=0; i<TTMx[t].size(); i++)
-			mergedWaitList.push_back(TTMx[t][i]);
+			mergedTripList.push_back(TTMx[t][i]);
 
 		if (ALGORITHM == GREEDY)
-			matchTripsToCarsGreedy(mergedWaitList, t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
+			matchTripsToCarsGreedy(mergedTripList, t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 		else
-			matchTripsToCarsScram(mergedWaitList, t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
+			matchTripsToCarsScram(mergedTripList, t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 
-	} else {	*/
+		// Clear waitList
+		for (int w=0; w <6; w++){
+
+			waitList[w].clear();
+			waitListI[w] = 0;
+		}
+
+		// Add Trips to waitList
+		for (int i=0; i < mergedTripList.size(); i++)
+		{
+			if (mergedTripList[i].carlink == false)
+			{
+				mergedTripList[i].waitTime += 5;
+				if (t - mergedTripList[i].startTime < 6){
+					waitList[t - mergedTripList[i].startTime].push_back(mergedTripList[i]);
+					waitListI[t - mergedTripList[i].startTime]++;
+				}
+				else
+					unservedT++;
+			}
+		}
+
+	} else {	
 //		cout << "matching wait lists"<<endl;
         	for (int w = 5; w>= 0; w--)
         	{
@@ -1098,8 +1120,8 @@ vector<Trip> waitList[6];
 		else
 			matchTripsToCarsScram(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 	
-//	} // End Separate Part Here
-//	cout << "add to waitlist"<<endl;
+	} // End Separate Part Here
+
 // for each trip that hasn't found a car, create a new one if in warm start or put on the wait list if running normal run
         for (int trp = 0; trp < timeTripCounts[t]; trp++)
         {
@@ -1127,10 +1149,6 @@ vector<Trip> waitList[6];
 
                     waitZonesTL[TTMx[t][trp].startX / zoneSizeL][TTMx[t][trp].startY / zoneSizeL]++;
                     waitZonesTS[TTMx[t][trp].startX / zoneSizeS][TTMx[t][trp].startY / zoneSizeS]++;
-			
-//		 if (t==3 && trp == 0)
-//	                cout << "Heiii boii"<<endl;
-
 
                     TTMx[t][trp].waitTime = 5;
 			waitList[0].push_back(TTMx[t][trp]);

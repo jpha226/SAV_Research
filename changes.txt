@@ -1,0 +1,18 @@
+I have made the following changes to the original simulator:
+
+General:
+	- Bug in findNearestCar where if starting in the first quadrant, the find results would be ignored for the first two quadrants it checked. This change improved Greedy matching and reduced fleet size.
+	- Changed CarMx and TTMx to be arrays of vectors. This makes the structures more dynamic
+	- Similar change to the wait lists
+	- Added the possibility of switching back and forth between Greedy algorithm or SCRAM for matching trips.
+	- Added possibility of merging waitList and tripList to match all trips for one time step at the same time.
+	- Updated travel speeds to vary based on car start location
+	- Updated trip generation rate and trip distance distribution for a larger grid
+	- In function getDest, newX and newY were being used in 'if' statements before having values. I moved two assignment statements from below the 'if' statements to above them to correct for this.
+	- A number of multidimensional arrays are being declared with size xMax by yMax when they really need to have sizes based on number of zones. I'm working on this still.
+	- numZones * zoneSize must equal xMax or yMax. I changed the definition of zoneSize to depend on numZones so this relationship is always maintained.
+
+
+SAEV:
+	- Can change car ranges and time to refuel / recharge.
+	- Cars can approve or reject trips based on fuel (In Greedy matching only)
