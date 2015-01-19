@@ -54,7 +54,7 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define ALGORITHM SCRAM // Matching is done with either the original greedy approach or SCRAM
 
 #define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
-#define WAIT MERGE // Refers to giving all unmatched trip equal priority or separate
+#define WAIT SEPARATE // Refers to giving all unmatched trip equal priority or separate
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV and WAIT as SEPARATE.
 * The upgraded simulator for Donna Chen's research is ran as SIZE LARGE and SIMULATOR SAEV
@@ -122,7 +122,7 @@ const int tripDistSize = 60;
 const int zoneSizeL = xMax / numZonesL; // 8
 const int zoneSizeS = xMax / numZonesS; // 4
 const int maxNumRuns = 1005;
-const int numWarmRuns = 20; // 20
+const int numWarmRuns = 10; // 20
 
 #if SIMULATOR == SAV
 const int carRange = 1600;//320;
@@ -901,7 +901,8 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 
     for (t = startT; t < 288; t++)
     {
-	
+	if (!warmStart)
+		cout << "Time of day: "<<t<<endl;	
         carCt = 0;
         for (int xc = 0; xc < xMax; xc++)
         {
@@ -1060,7 +1061,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 //		cout << "matching wait lists"<<endl;
         	for (int w = 5; w>= 0; w--)
         	{
-			if (ALGORITHM == GREEDY)
+			if (ALGORITHM == GREEDY || warmStart)
 	                	matchTripsToCarsGreedy(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
                 	else
 				matchTripsToCarsScram(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
@@ -1142,7 +1143,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 		  }
 		if (t == 71)
 			cout << "match normal tripps" <<endl;	
-		if (ALGORITHM == GREEDY)
+		if (ALGORITHM == GREEDY || warmStart)
 			matchTripsToCarsGreedy(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 		else
 			matchTripsToCarsScram(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
@@ -7530,7 +7531,7 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
         }
 	//if (time == 71 && tripList.size() == 77)
 	//	cout << "right call"<<endl;
-//      cout << "num cars: " << cars.size() << endl;
+      cout << "num cars: " << cars.size() <<" "<<tripList.size()<< endl;
         if (cars.size() == 0){
         //	if (time == 71 || time == 72)
 	//		cout << "None matched cars: "<< time <<endl; 

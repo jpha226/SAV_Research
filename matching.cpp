@@ -73,6 +73,8 @@ std::vector<Edge> Matching::findMatching()
 	int m = t.targets.size();
 	nCars = n;
 	nTrips = m;
+	int max[n];	
+
 	if (n < m){
 
 		for (int i=nCars; i<nCars + m-n; i++)
