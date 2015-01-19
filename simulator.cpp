@@ -51,10 +51,10 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define SEPARATE 5
 
 #define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
-#define ALGORITHM GREEDY // Matching is done with either the original greedy approach or SCRAM
+#define ALGORITHM SCRAM // Matching is done with either the original greedy approach or SCRAM
 
 #define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
-#define WAIT SEPARATE // Refers to giving all unmatched trip equal priority or separate
+#define WAIT MERGE // Refers to giving all unmatched trip equal priority or separate
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV and WAIT as SEPARATE.
 * The upgraded simulator for Donna Chen's research is ran as SIZE LARGE and SIMULATOR SAEV
@@ -1140,7 +1140,8 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 	            waitListI[w] = 0;
 		    waitList[w].clear();
 		  }
-//		cout << "match normal tripps" <<endl;	
+		if (t == 71)
+			cout << "match normal tripps" <<endl;	
 		if (ALGORITHM == GREEDY)
 			matchTripsToCarsGreedy(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 		else
@@ -1206,7 +1207,8 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 //        }
 
 // move all cars that are in use
-//	cout << "about to move cars"<<endl;
+	if (t == 71)
+		cout << "about to move cars"<<endl;
         for (int x = 0; x < xMax; x++)
         {
             for (int y = 0; y < yMax; y++)
@@ -4683,7 +4685,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
         trp.carlink = true;
 	
         waitTrav = abs(x - trp.startX) + abs(y - trp.startY);
-        trp.waitTime = trp.waitTime + (5 * waitTrav / maxDist) ;
+        trp.waitTime = trp.waitTime + (5.0 * waitTrav / maxDist) ;
         if (trp.waitPtr != NULL)
         {
             trp.waitPtr -> waitTime = trp.waitTime;
@@ -4921,7 +4923,8 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
 
 	}
     else { // Car did not reach pick up location
-cout << "should not be in here"<<endl;
+	if (ALGORITHM == GREEDY)
+		cout << "should not be in here for GREEDY match"<<endl;
          unoccDist = unoccDist + trav;
         totDist = totDist + trav;
         waitT = waitT + trav;
@@ -7446,7 +7449,7 @@ void showWaitCars(int t, vector<Trip> waitList [6], int* waitListI, std::vector<
 // Matching functions...conveniently at the end of the code
 void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts)
 {
-
+//	cout << "using greedy match"<<endl;
         for (int d = 0; d < trav; d++)
         {
 
@@ -7481,23 +7484,25 @@ void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool rep
 
 void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts)
 {
-
+//	if (time == 71)
+//		cout << "time is 71"<<endl;
         Matching matching;
         int trpX, trpY;
         vector<Car*> cars;
         Car curr;
-        if (tripList.size() == 0)
-                return;
+        if (tripList.size() == 0){
+        //	if (time == 71 || time == 72)
+	//		cout << "None matched trips "<< time <<endl;
+	        return;
+	}
 
         for (int trp=0; trp < tripList.size(); trp++)
                 matching.addTrip(tripList[trp].startX, tripList[trp].startY, trp);
-
 
         for (int x = 0; x < xMax; x++)
         {
                 for (int y = 0; y < yMax; y++)
                 {
-
 
                         for (int c=0; c < CarMx[x][y].size(); c++)
                         {
@@ -7523,14 +7528,20 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
                 }
 
         }
+	//if (time == 71 && tripList.size() == 77)
+	//	cout << "right call"<<endl;
 //      cout << "num cars: " << cars.size() << endl;
-        if (cars.size() == 0)
-                return;
+        if (cars.size() == 0){
+        //	if (time == 71 || time == 72)
+	//		cout << "None matched cars: "<< time <<endl; 
+	       return;
+	}
 //      cout << "call match func"<<endl;
         matching.setDimensions(tripList.size(),cars.size());
         vector<Edge> result = matching.findMatching();
         int carIndex,trip;
-        int waitTrav;
+        double waitTrav;
+	char a;
 //      cout << "found match"<<endl;
         for (vector<Edge>::iterator it = result.begin(); it != result.end(); it++)
         {
@@ -7538,15 +7549,20 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
                 trip = (*it).second.second;
                 assignCar(cars[carIndex], &tripList[trip]);
 		cars[carIndex]->currTrip = &tripList[trip];
+	//	if (tripList[trip].startTime == 71)
+	//		cout << "Time is 71"<<endl;
 //              assignCar(cars[carIndex]->x,cars[carIndex]->y, cars[carIndex]->c_value, CarMx, tripList[trip]);
                 tripList[trip].carlink = true;
                 waitTrav = abs(cars[carIndex]->x - tripList[trip].startX) + abs(cars[carIndex]->y - tripList[trip].startY);
 //              if (waitTrav > trav)
 //                      cout <<"distance: "<<waitTrav<<" > "<< trav << endl;
-                tripList[trip].waitTime = tripList[trip].waitTime + (5 * waitTrav / trav);
-                if (tripList[trip].waitPtr != NULL)
+                tripList[trip].waitTime = tripList[trip].waitTime + (5.0 * waitTrav / trav);
+                if (tripList[trip].waitPtr != NULL){
                         tripList[trip].waitPtr -> waitTime = tripList[trip].waitTime;
-
+			tripList[trip].waitPtr -> carlink = true;
+			cars[carIndex]->currTrip = tripList[trip].waitPtr;
+		}
+		
         }
 
 }
