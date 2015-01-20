@@ -131,7 +131,7 @@ const int refuelCheck = 0; //40
 #else
 const int carRange = 320;
 const int refuleTime = 48;
-const int refuelCheck = 0;
+const int refuelCheck = 40; // Refuels if only 10 miles left
 #endif
 
  long totDistRun, totUnoccDistRun, totCarsRun, totTripsRun, totHSRun, totCSRun, totWaitTRun, totUnservedTRun, totUnusedRun, totUnoccRun, maxAvailCars;
