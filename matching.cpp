@@ -67,6 +67,40 @@ void Matching::setDimensions(int nt, int nc)
 void Matching::addCar(int x, int y, int id){t.starts.push_back(std::make_pair(id,std::make_pair(x, y)));}
 void Matching::addTrip(int x, int y, int id){t.targets.push_back(std::make_pair(id,std::make_pair(x, y)));}
 
+// k must be less than or equal to smaller of number of trips or cars
+double* getKthSmallest(int k, std::vector<Point> list)
+{
+	double *result = new double[k];
+	int *minIndex = new double[k];
+	double *minValue = new double[k];	/*
+	double dist;
+	Point temp;
+	// get Kth smallest ran k times
+	for (int i=0; i<k; i++){
+
+		for (int j=0; j<k; j++){
+			minIndex[i] = j;
+			minValue[i] = // distance from targets[i] to list[j]
+			for (int l=j+1; l<list.size(); l++){
+				// compute distance for list[l]
+				if (list[l] < minValue[i]) {
+					minIndex[i] = l;
+					minValue[i] = // distance between targets[i] and list[l];
+				}
+			}
+			// Swap in list
+			temp = list[minIndex[i]];
+			list[minIndex[i]] = list[j];
+			list[j] = temp;
+		}
+		
+	}*/
+	delete[] minIndex;
+	delete[] result;
+
+	return minValue;
+}
+
 std::vector<Edge> Matching::findMatching()
 {
 	int n = t.starts.size();
@@ -74,13 +108,36 @@ std::vector<Edge> Matching::findMatching()
 	nCars = n;
 	nTrips = m;
 	int max[n];	
+	double *kth;
+	double dist;
+	std::vector<Point> temp;
 
 	if (n < m){
+
+		// filter number of trips
+		//kth = getKthSmallest(nCars, targets);
 
 		for (int i=nCars; i<nCars + m-n; i++)
 			t.starts.push_back(std::make_pair(i,std::make_pair(0,0)));
 
 	} else {
+
+		// filter number of cars
+/*		kth = getKthSmallest(nTrips, starts);
+		temp = starts;
+		starts.clear();
+		for (int i=0; i<nTrips; i++)
+		{
+			for (int j=0; j<nCars; j++)
+			{
+				dist = // distance between jth start and ith target
+				if (dist <= kth[i])
+					starts.push_back(temp[j]);
+			}	
+		}		
+
+		n = starts.size();
+		nCars = n;*/
 
 		for (int i=nTrips; i<nTrips + n - m; i++)
 			t.targets.push_back(std::make_pair(i,std::make_pair(0,0)));
@@ -399,7 +456,7 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
                                      std::make_pair(t.starts[i].first, t.targets[j].first)));
 
       } else {
-	int dist = pow(getdist(t.starts[i], t.targets[j]),2);
+	double dist = pow(getdist(t.starts[i], t.targets[j]),2);
         edges.push_back(std::make_pair(dist,
                                      std::make_pair(t.starts[i].first, t.targets[j].first)));
        

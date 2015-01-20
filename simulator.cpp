@@ -50,10 +50,10 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define MERGE 4
 #define SEPARATE 5
 
-#define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
-#define ALGORITHM SCRAM // Matching is done with either the original greedy approach or SCRAM
+#define SIZE LARGE // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
+#define ALGORITHM GREEDY // Matching is done with either the original greedy approach or SCRAM
 
-#define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
+#define SIMULATOR SAEV // Sets car ranges and fuel times for either electric or gas vehicles
 #define WAIT SEPARATE // Refers to giving all unmatched trip equal priority or separate
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV and WAIT as SEPARATE.
@@ -96,6 +96,7 @@ struct Car
     int tripCt;
     int gas;
     int refuel;
+    int numRejects;
     Trip* currTrip;
 };
 
@@ -107,7 +108,7 @@ const int WaitListSize = 4000;
 
 #if SIZE == LARGE
 const int numZonesL = 50;
-const int numZonesS = 100;
+const int numZonesS = 50;
 const double nearDist = 30; // 10
 const double innerDist = 10;
 const int tripDistSize = 601;
@@ -127,11 +128,11 @@ const int numWarmRuns = 10; // 20
 #if SIMULATOR == SAV
 const int carRange = 1600;//320;
 const int refuelTime = 2; // 48
-const int refuelCheck = 0; //40
+const int refuelDist = 0; //40
 #else
-const int carRange = 320;
-const int refuleTime = 48;
-const int refuelCheck = 40; // Refuels if only 10 miles left
+const int carRange = 320; // = 80 miles or 1000 = 250 miles
+const int refuelTime = 48; // = 4 hours or 6 = 30 minutes
+const int refuelDist = 40; // Refuels if only 10 miles left
 #endif
 
  long totDistRun, totUnoccDistRun, totCarsRun, totTripsRun, totHSRun, totCSRun, totWaitTRun, totUnservedTRun, totUnusedRun, totUnoccRun, maxAvailCars;
@@ -901,8 +902,8 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 
     for (t = startT; t < 288; t++)
     {
-	if (!warmStart)
-		cout << "Time of day: "<<t<<endl;	
+//	if (!warmStart)
+//		cout << "Time of day: "<<t<<endl;	
         carCt = 0;
         for (int xc = 0; xc < xMax; xc++)
         {
@@ -1141,8 +1142,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 	            waitListI[w] = 0;
 		    waitList[w].clear();
 		  }
-		if (t == 71)
-			cout << "match normal tripps" <<endl;	
+	
 		if (ALGORITHM == GREEDY || warmStart)
 			matchTripsToCarsGreedy(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 		else
@@ -1208,8 +1208,6 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 //        }
 
 // move all cars that are in use
-	if (t == 71)
-		cout << "about to move cars"<<endl;
         for (int x = 0; x < xMax; x++)
         {
             for (int y = 0; y < yMax; y++)
@@ -1218,7 +1216,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                 {
                     if (CarMx[x][y][c].inUse && !CarMx[x][y][c].moved)
                     {
-			//trav = getCarTrav(x,y,t);
+			trav = getCarTrav(x,y,t);
 			moveCar (CarMx,  x, y, c, t, trav, totDist, unoccDist, waitT, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                  trackX, trackY, trackC);
                         c--;
@@ -1323,6 +1321,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                         if (CarMx[x][y][c].refuel == 0)
                         {
                             CarMx[x][y][c].inUse = false;
+			    CarMx[x][y][c].numRejects = 0;
 //			    CarMx[x][y][c].currTrip = NULL;
                         }
                     }
@@ -1398,6 +1397,7 @@ void placeInitCars (std::vector<Car> CarMx[][yMax],   int* timeTripCounts, doubl
                 CarMx[x][y][c].destY = CarMx[x][y][c].y;
                 CarMx[x][y][c].returnHome = false;
                 CarMx[x][y][c].tripCt = 0;
+		CarMx[x][y][c].numRejects = 0;
 //		CarMx[x][y][c].currTrip = NULL;
             }
         }
@@ -4731,6 +4731,8 @@ bool lookForCar (int x, int y, int dist, int& cn, std::vector<Car> CarMx[][yMax]
 	        	if (CarMx[x][y][c].gas >= dist){
 				found = true;
             			cn = c;
+			} else {
+				CarMx[x][y][c].numRejects++;
 			}
 		}
         }
@@ -4814,6 +4816,7 @@ Car genNewCar (Trip trp)
     nCar.retHX = trp.startX;
     nCar.retHY = trp.startY;
     nCar.tripCt = 0;
+    nCar.numRejects = 0;
 
     randGas = rand();
     randGas = randGas / RAND_MAX;
@@ -4909,8 +4912,8 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
 		double waitTrav = abs(tCar.currTrip->startX - x) + abs(tCar.currTrip->startY - y);
 		wait = 5 * (t - tCar.currTrip->startTime);
 		wait +=  (5 * waitTrav / maxTrav);
-		
-		if (abs(wait - CarMx[x][y][c].currTrip->waitTime) >= 0.0001){
+		CarMx[x][y][c].currTrip->waitTime = wait;
+		if (abs(wait - CarMx[x][y][c].currTrip->waitTime) >= 0.000001){
 			cout << "Time: " << tCar.currTrip->startTime << " " << t <<endl;
 			cout << "Wait time error: " << wait << " " << CarMx[x][y][c].currTrip->waitTime<<endl;
 			cout << "Wait Trav: "<<waitTrav<< " over "<< maxTrav<<endl;
@@ -4924,8 +4927,8 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
 
 	}
     else { // Car did not reach pick up location
-	if (ALGORITHM == GREEDY)
-		cout << "should not be in here for GREEDY match"<<endl;
+//	if (ALGORITHM == GREEDY)
+//		cout << "should not be in here for GREEDY match"<<endl;
          unoccDist = unoccDist + trav;
         totDist = totDist + trav;
         waitT = waitT + trav;
@@ -7003,7 +7006,7 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
         }
 
         // determine if we need to refuel
-        if (tCar.gas < refuelCheck)
+        if (tCar.gas < refuelDist)
         {
             tCar.refuel = refuelTime; // Changed to 48 from 2 (wait time is now 4 hours instead of 10 minutes)
             tCar.inUse = true;
@@ -7451,6 +7454,8 @@ void showWaitCars(int t, vector<Trip> waitList [6], int* waitListI, std::vector<
 void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts)
 {
 //	cout << "using greedy match"<<endl;
+	int trueTrav;
+	double x;
         for (int d = 0; d < trav; d++)
         {
 
@@ -7460,7 +7465,10 @@ void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool rep
                         {
                                 if (tripList[i].carlink == false)
                                 {
-                                        findNearestCar(tripList[i], CarMx, d, trav,  reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
+					trueTrav = getCarTrav(tripList[i].startX, tripList[i].startY, time);
+					x = (1.0 * trueTrav) / (trav);
+					for (int j = (int)(d*x); j < (1+d)*x; j++)
+	                                        findNearestCar(tripList[i], CarMx, j, trav,  reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
                                 }
                         }
 
@@ -7472,10 +7480,12 @@ void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool rep
 //					cout<< " matching?"<<endl;
                                 if (tripList[i].carlink == false)
                                 {
-                                        findNearestCar(tripList[i], CarMx, d, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
+					trueTrav = getCarTrav(tripList[i].startX, tripList[i].startY, time);
+					x = (1.0 * trueTrav) / (trav);
+					for (int j = (int)(d*x); j < (1+d)*x; j++)
+	                                        findNearestCar(tripList[i], CarMx, j, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 		                }
-			//	if (i == 0 && time == 3 && tripList[i].carlink)
-//					cout << "Matched! " << tripList[i].carlink <<endl;
+			
                         }
 
                 }
