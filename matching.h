@@ -46,6 +46,7 @@ class Matching{
 		void createEdge(int c, int trp, int dist);
 		void addCar(int x, int y, int c);
 		void addTrip(int x, int y, int t);
+		double* getKthSmallest(int k, std::vector<Point> list, std::vector<Point> otherlist);
 		std::vector<Edge> findMatching();	
 		void initializeMatrix(std::vector<std::vector<int> > &matrix);
 		std::vector<edge*> hungarianAlgorithm();

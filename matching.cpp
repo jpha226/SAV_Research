@@ -68,11 +68,11 @@ void Matching::addCar(int x, int y, int id){t.starts.push_back(std::make_pair(id
 void Matching::addTrip(int x, int y, int id){t.targets.push_back(std::make_pair(id,std::make_pair(x, y)));}
 
 // k must be less than or equal to smaller of number of trips or cars
-double* getKthSmallest(int k, std::vector<Point> list)
+double* Matching::getKthSmallest(int k, std::vector<Point> list, std::vector<Point> otherlist)
 {
 	double *result = new double[k];
-	int *minIndex = new double[k];
-	double *minValue = new double[k];	/*
+	int *minIndex = new int[k];
+	double *minValue = new double[k];	
 	double dist;
 	Point temp;
 	// get Kth smallest ran k times
@@ -80,12 +80,14 @@ double* getKthSmallest(int k, std::vector<Point> list)
 
 		for (int j=0; j<k; j++){
 			minIndex[i] = j;
-			minValue[i] = // distance from targets[i] to list[j]
+			minValue[i] = pow(getdist(otherlist[i],list[j]),2);// distance from targets[i] to list[j]
 			for (int l=j+1; l<list.size(); l++){
-				// compute distance for list[l]
-				if (list[l] < minValue[i]) {
+				
+				dist = pow(getdist(otherlist[i],list[l]),2);
+
+				if (dist < minValue[i]) {
 					minIndex[i] = l;
-					minValue[i] = // distance between targets[i] and list[l];
+					minValue[i] = dist;// distance between targets[i] and list[l];
 				}
 			}
 			// Swap in list
@@ -94,7 +96,7 @@ double* getKthSmallest(int k, std::vector<Point> list)
 			list[j] = temp;
 		}
 		
-	}*/
+	}
 	delete[] minIndex;
 	delete[] result;
 
@@ -115,38 +117,55 @@ std::vector<Edge> Matching::findMatching()
 	if (n < m){
 
 		// filter number of trips
-		//kth = getKthSmallest(nCars, targets);
+		kth = getKthSmallest(nCars, t.targets, t.starts);
+		temp = t.targets;
+		t.targets.clear();
+		
+		for (int i=0; i<nCars; i++)
+		{
+			for (int j=0; j<nTrips; j++)
+			{
+				dist = pow(getdist(temp[j],t.starts[i]),2);
+				if (dist <= kth[i])
+					t.targets.push_back(temp[j]);
+			}
 
-		for (int i=nCars; i<nCars + m-n; i++)
+		}
+
+		m = t.targets.size();
+		
+
+		for (int i=nCars; i<nCars + m - n; i++)
 			t.starts.push_back(std::make_pair(i,std::make_pair(0,0)));
 
 	} else {
 
 		// filter number of cars
-/*		kth = getKthSmallest(nTrips, starts);
-		temp = starts;
-		starts.clear();
+		kth = getKthSmallest(nTrips, t.starts, t.targets);
+		temp = t.starts;
+		t.starts.clear();
 		for (int i=0; i<nTrips; i++)
 		{
 			for (int j=0; j<nCars; j++)
 			{
-				dist = // distance between jth start and ith target
+				dist = pow(getdist(temp[j],t.targets[i]),2); // distance between jth start and ith target
 				if (dist <= kth[i])
-					starts.push_back(temp[j]);
+					t.starts.push_back(temp[j]);
 			}	
 		}		
 
-		n = starts.size();
-		nCars = n;*/
-
+		n = t.starts.size();
+		
 		for (int i=nTrips; i<nTrips + n - m; i++)
 			t.targets.push_back(std::make_pair(i,std::make_pair(0,0)));
 
 	}
 
+	delete[] kth;
 	//std::cout<<"num cars: "<<nCars<<std::endl;
 	//std::cout <<"num trips: "<<nTrips<<std::endl;
 	N = t.starts.size();
+	std::cout <<"N = "<<N<<std::endl;
 	return mmd_msd2(t);
 
 } 
@@ -447,7 +466,7 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
   
   std::vector<Edge> edges;
   std::vector<Edge> answer;
-
+  // std::cout << "Num Trips: "<< t.targets.size() << " "<< nTrips << std::endl;
   // Create edges from all pairwise distances squared
   for(int i = 0; i < n; i++)
     for(int j = 0; j < n; j++)
@@ -486,7 +505,7 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
   }
 
   hungarian();
-//  std::cout<<"algorithm ran"<<std::endl;
+  std::cout<<"algorithm ran"<<std::endl;
   for(int i = 0; i < n; i++){
     //printf("Got: %d %d %lf\n", i, h2[i], getdist(t.starts[i], t.targets[h2[i]]));
     if (t.starts[i].first < nCars && t.targets[xy[i]].first < nTrips)
