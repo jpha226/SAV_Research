@@ -49,12 +49,15 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define SAEV 3
 #define MERGE 4
 #define SEPARATE 5
+#define CONSTANT 6
+#define VARY 7
 
-#define SIZE LARGE // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
-#define ALGORITHM GREEDY // Matching is done with either the original greedy approach or SCRAM
 
+#define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
+#define ALGORITHM SCRAM // Matching is done with either the original greedy approach or SCRAM
+#define SPEED CONSTANT
 #define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
-#define WAIT SEPARATE // Refers to giving all unmatched trip equal priority or separate
+#define WAIT MERGE // Refers to giving all unmatched trip equal priority or separate
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV and WAIT as SEPARATE.
 * The upgraded simulator for Donna Chen's research is ran as SIZE LARGE and SIMULATOR SAEV
@@ -127,7 +130,7 @@ const int numWarmRuns = 15; // 20
 
 #if SIMULATOR == SAV
 const int carRange = 1600;//320;
-const int refuelTime = 4; // 48 -- should be two for normal
+const int refuelTime = 2; // 48 -- should be two for normal
 const int refuelDist = 0; //40
 const int rejectLimit = 1000000000; // Really high means it won't be used
 #else
@@ -904,8 +907,8 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 
     for (t = startT; t < 288; t++)
     {
-//	if (!warmStart)
-//		cout << "Time of day: "<<t<<endl;	
+	if (!warmStart)
+		cout << "Time of day: "<<t<<endl;	
         carCt = 0;
         for (int xc = 0; xc < xMax; xc++)
         {
@@ -1218,7 +1221,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                 {
                     if (CarMx[x][y][c].inUse && !CarMx[x][y][c].moved)
                     {
-			//if (SIMULATOR == SAEV)
+			if (SPEED == VARY)
 				trav = getCarTrav(x,y,t);
 			moveCar (CarMx,  x, y, c, t, trav, totDist, unoccDist, waitT, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                  trackX, trackY, trackC);
@@ -7472,12 +7475,12 @@ void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool rep
                         {
                                 if (tripList[i].carlink == false)
                                 {
-					//if (SIMULATOR == SAEV){
+					if (SPEED == VARY){
 						trueTrav = getCarTrav(tripList[i].startX, tripList[i].startY, time);
 						x = (1.0 * trueTrav) / (trav);
-					//}
-					//else
-					//	x = 1;
+					}
+					else
+						x = 1;
 					for (int j = (int)(d*x); j < (1+d)*x; j++)
 	                                        findNearestCar(tripList[i], CarMx, j, trav,  reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
                                 }
@@ -7491,11 +7494,11 @@ void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool rep
 //					cout<< " matching?"<<endl;
                                 if (tripList[i].carlink == false)
                                 {
-					//if (SIMULATOR == SAEV){
+					if (SPEED == VARY){
 						trueTrav = getCarTrav(tripList[i].startX, tripList[i].startY, time);
 						x = (1.0 * trueTrav) / (trav);
-					//} else
-					//	x = 1;
+					} else
+						x = 1;
 					for (int j = (int)(d*x); j < (1+d)*x; j++)
 	                                        findNearestCar(tripList[i], CarMx, j, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 		                }
@@ -7564,6 +7567,7 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
 //      cout << "call match func"<<endl;
         matching.setDimensions(tripList.size(),cars.size());
         vector<Edge> result = matching.findMatching();
+	
         int carIndex,trip;
         double waitTrav;
 	char a;

@@ -9,6 +9,7 @@
 #include<climits>
 #include<float.h>
 #include<string.h>
+#include<time.h>
 
 #include <boost/cstdint.hpp>
 
@@ -121,13 +122,15 @@ std::vector<Edge> Matching::findMatching()
 		temp = t.targets;
 		t.targets.clear();
 		
-		for (int i=0; i<nCars; i++)
+		for (int i=0; i<nTrips; i++)
 		{
-			for (int j=0; j<nTrips; j++)
+			for (int j=0; j<nCars; j++)
 			{
-				dist = pow(getdist(temp[j],t.starts[i]),2);
-				if (dist <= kth[i])
-					t.targets.push_back(temp[j]);
+				dist = pow(getdist(temp[i],t.starts[j]),2);
+				if (dist <= kth[j]){
+					t.targets.push_back(temp[i]);
+					break;
+				}
 			}
 
 		}
@@ -144,13 +147,17 @@ std::vector<Edge> Matching::findMatching()
 		kth = getKthSmallest(nTrips, t.starts, t.targets);
 		temp = t.starts;
 		t.starts.clear();
-		for (int i=0; i<nTrips; i++)
+		std::cout<<"Starts = "<<t.starts.size()<<std::endl;
+		for (int i=0; i<nCars; i++)
 		{
-			for (int j=0; j<nCars; j++)
+			for (int j=0; j<nTrips; j++)
 			{
-				dist = pow(getdist(temp[j],t.targets[i]),2); // distance between jth start and ith target
-				if (dist <= kth[i])
-					t.starts.push_back(temp[j]);
+				dist = pow(getdist(temp[i],t.targets[j]),2); // distance between jth start and ith target
+				if (dist <= kth[j]){
+					t.starts.push_back(temp[i]);
+					//std::cout << "Adding "<< i << " for "<<j<<std::endl;
+					break;
+				}
 			}	
 		}		
 
@@ -467,20 +474,22 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
   std::vector<int> indices;
   if (nTrips < nCars){
 
+	for (int i=0; i<t.starts.size(); i++){
+		indices.push_back(t.starts[i].first);
+		t.starts[i].first = indices.size() - 1;
+//		std::cout << t.starts[i].first << " is actually " << indices[t.starts[i].first]<<std::endl;
+	}
+
+  } else if (nCars < nTrips){
+
 	for (int i=0; i<t.targets.size(); i++){
 		indices.push_back(t.targets[i].first);
 		t.targets[i].first = indices.size() - 1;
 	}
 
-  } else if (nCars < nTrips{
-
-	for (int i=0; i<t.starts.size(); i++){
-		indices.push_back(t.starts[i].first);
-		t.starts[i].first = indices.size() - 1;
-	}
-
   }
   std::cout<<"nTrips = "<<nTrips<<" nCars = "<<nCars<<std::endl;
+  std::cout<<"num Targets = "<<t.targets.size()<<" num Starts: "<<t.starts.size()<<std::endl;
   std::vector<Edge> edges;
   std::vector<Edge> answer;
   // std::cout << "Num Trips: "<< t.targets.size() << " "<< nTrips << std::endl;
@@ -509,7 +518,8 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
   used.resize(n);
 
   // Call getMinimalMaxEdgeInPerfectMatching to get minimum maximal edge in a perfect mathcing.
-  
+  clock_t c1,c2;
+  c1 = clock();
   int choice = getMinimalMaxEdgeInPerfectMatching(edges, n, n);
   double max_edge_value = edges[choice].first;
 
@@ -522,25 +532,40 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
   }
 
   hungarian();
-  std::cout<<"algorithm ran"<<std::endl;
+  c2 = clock();
+  float time_diff = ((float)c2 - (float)c1);
+  float seconds = time_diff / CLOCKS_PER_SEC;
+
+  std::cout<<"algorithm ran: "<< seconds <<std::endl;
 
   // Convert back
   if (nTrips < nCars){
 
-	// Keep in mind that xy, yx and t.targets will be affected
+	  for(int i = 0; i < n; i++){
+	
+	    //printf("Got: %d %d %lf\n", i, h2[i], getdist(t.starts[i], t.targets[h2[i]]));
+	
+	    if (t.starts[i].first < nCars && t.targets[xy[i]].first < nTrips)
+	      answer.push_back(std::make_pair(getdist(t.starts[i], t.targets[xy[i]]),
+                                    std::make_pair(indices[t.starts[i].first], t.targets[xy[i]].first)));
+  	}
 
   } else if (nCars < nTrips){
-	
-	// Same comment
 
+	  for(int i = 0; i < n; i++){
+	    //printf("Got: %d %d %lf\n", i, h2[i], getdist(t.starts[i], t.targets[h2[i]]));
+    		if (t.starts[i].first < nCars && t.targets[xy[i]].first < nTrips)
+		      answer.push_back(std::make_pair(getdist(t.starts[i], t.targets[xy[i]]),
+                                    std::make_pair(t.starts[i].first, indices[t.targets[xy[i]].first])));
+  	  }
   }
 
-  for(int i = 0; i < n; i++){
+ // for(int i = 0; i < n; i++){
     //printf("Got: %d %d %lf\n", i, h2[i], getdist(t.starts[i], t.targets[h2[i]]));
-    if (t.starts[i].first < nCars && t.targets[xy[i]].first < nTrips)
-      answer.push_back(std::make_pair(getdist(t.starts[i], t.targets[xy[i]]),
-                                    std::make_pair(t.starts[i].first, t.targets[xy[i]].first)));
-  }
+//    if (t.starts[i].first < nCars && t.targets[xy[i]].first < nTrips)
+     // answer.push_back(std::make_pair(getdist(t.starts[i], t.targets[xy[i]]),
+   //                                 std::make_pair(t.starts[i].first, t.targets[xy[i]].first)));
+ // }
 
 	delete[] lx;
 	delete[] ly;
