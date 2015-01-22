@@ -463,7 +463,24 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
                          // l(slackx[y]) + l(y) - w(slackx[y],y) = slack[y]
   prev = new int[N];             //array for memorizing alternating paths
 
-  
+  // Convert trip or car numbers to list starting at 0 and going to nTrips or nCars 
+  std::vector<int> indices;
+  if (nTrips < nCars){
+
+	for (int i=0; i<t.targets.size(); i++){
+		indices.push_back(t.targets[i].first);
+		t.targets[i].first = indices.size() - 1;
+	}
+
+  } else if (nCars < nTrips{
+
+	for (int i=0; i<t.starts.size(); i++){
+		indices.push_back(t.starts[i].first);
+		t.starts[i].first = indices.size() - 1;
+	}
+
+  }
+  std::cout<<"nTrips = "<<nTrips<<" nCars = "<<nCars<<std::endl;
   std::vector<Edge> edges;
   std::vector<Edge> answer;
   // std::cout << "Num Trips: "<< t.targets.size() << " "<< nTrips << std::endl;
@@ -506,6 +523,18 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
 
   hungarian();
   std::cout<<"algorithm ran"<<std::endl;
+
+  // Convert back
+  if (nTrips < nCars){
+
+	// Keep in mind that xy, yx and t.targets will be affected
+
+  } else if (nCars < nTrips){
+	
+	// Same comment
+
+  }
+
   for(int i = 0; i < n; i++){
     //printf("Got: %d %d %lf\n", i, h2[i], getdist(t.starts[i], t.targets[h2[i]]));
     if (t.starts[i].first < nCars && t.targets[xy[i]].first < nTrips)
