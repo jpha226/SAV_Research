@@ -1,0 +1,14 @@
+
+
+To do list:
+Verify all metrics:
+	- For SCRAM: unoccupied travel, wait time, trips served, cars required, wait time broken down by 5 minute intervals, hot & cold starts
+Let SCRAM reassign at each time step
+Change random seed and how a run starts
+
+Ask Donna about why runs are consecutive days
+Ask Dr. Stone about random generator (If I need multiple rand_gens)
+
+Vary the number of cars available
+Use SCRAM in large domain
+

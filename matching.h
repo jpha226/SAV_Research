@@ -45,7 +45,7 @@ class Matching{
 		~Matching();
 		void createEdge(int c, int trp, int dist);
 		void addCar(int x, int y, int c);
-		void addTrip(int x, int y, int t);
+		void addTrip(int x, int y, int t, int l);
 		double* getKthSmallest(int k, std::vector<Point> list, std::vector<Point> otherlist);
 		std::vector<Edge> findMatching();	
 		void initializeMatrix(std::vector<std::vector<int> > &matrix);
@@ -66,6 +66,7 @@ class Matching{
 
 	private: 
 		std::vector<edge*> edge_set;
+		std::vector<int> limit;
 		int nTrips;
 		int nCars;
 		int adjustedTrips;

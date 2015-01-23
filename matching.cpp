@@ -67,7 +67,12 @@ void Matching::setDimensions(int nt, int nc)
 }*/
 
 void Matching::addCar(int x, int y, int id){t.starts.push_back(std::make_pair(id,std::make_pair(x, y)));}
-void Matching::addTrip(int x, int y, int id){t.targets.push_back(std::make_pair(id,std::make_pair(x, y)));}
+
+void Matching::addTrip(int x, int y, int id, int l){
+
+	t.targets.push_back(std::make_pair(id,std::make_pair(x, y)));
+	limit.push_back(-1);
+}
 
 // k must be less than or equal to smaller of number of trips or cars
 double* Matching::getKthSmallest(int k, std::vector<Point> list, std::vector<Point> otherlist)

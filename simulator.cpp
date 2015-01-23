@@ -54,10 +54,10 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 
 
 #define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
-#define ALGORITHM GREEDY // Matching is done with either the original greedy approach or SCRAM
+#define ALGORITHM SCRAM // Matching is done with either the original greedy approach or SCRAM
 #define SPEED CONSTANT
 #define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
-#define WAIT SEPARATE // Refers to giving all unmatched trip equal priority or separate
+#define WAIT MERGE // Refers to giving all unmatched trip equal priority or separate
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV and WAIT as SEPARATE.
 * The upgraded simulator for Donna Chen's research is ran as SIZE LARGE and SIMULATOR SAEV
@@ -7542,7 +7542,7 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
 	}
 
         for (int trp=0; trp < tripList.size(); trp++)
-                matching.addTrip(tripList[trp].startX, tripList[trp].startY, trp);
+                matching.addTrip(tripList[trp].startX, tripList[trp].startY, trp, -1);
 
         for (int x = 0; x < xMax; x++)
         {
