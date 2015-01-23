@@ -19,7 +19,8 @@
 
 
 inline double Matching::getdist(const Point &a, const Point &b){
-  return hypot(a.second.first-b.second.first, a.second.second-b.second.second);
+  //return hypot(a.second.first-b.second.first, a.second.second-b.second.second);
+    return abs(a.second.first-b.second.first)+abs(a.second.second-b.second.second);
 }
 
 // remove an element from a vector by value.
@@ -81,10 +82,10 @@ double* Matching::getKthSmallest(int k, std::vector<Point> list, std::vector<Poi
 
 		for (int j=0; j<k; j++){
 			minIndex[i] = j;
-			minValue[i] = pow(getdist(otherlist[i],list[j]),2);// distance from targets[i] to list[j]
+			minValue[i] = getdist(otherlist[i],list[j]);// distance from targets[i] to list[j]
 			for (int l=j+1; l<list.size(); l++){
 				
-				dist = pow(getdist(otherlist[i],list[l]),2);
+				dist = getdist(otherlist[i],list[l]);
 
 				if (dist < minValue[i]) {
 					minIndex[i] = l;
@@ -114,10 +115,14 @@ std::vector<Edge> Matching::findMatching()
 	double *kth;
 	double dist;
 	std::vector<Point> temp;
-
+	adjustedTrips = nTrips;
+	adjustedCars = nCars;
+	clock_t t1,t2;
+	t1 = clock();
 	if (n < m){
 
 		// filter number of trips
+		if (15*n < m){
 		kth = getKthSmallest(nCars, t.targets, t.starts);
 		temp = t.targets;
 		t.targets.clear();
@@ -126,7 +131,7 @@ std::vector<Edge> Matching::findMatching()
 		{
 			for (int j=0; j<nCars; j++)
 			{
-				dist = pow(getdist(temp[i],t.starts[j]),2);
+				dist = getdist(temp[i],t.starts[j]);
 				if (dist <= kth[j]){
 					t.targets.push_back(temp[i]);
 					break;
@@ -136,23 +141,28 @@ std::vector<Edge> Matching::findMatching()
 		}
 
 		m = t.targets.size();
+		adjustedTrips = m;
+		delete[] kth;
+		}	
 		
-
 		for (int i=nCars; i<nCars + m - n; i++)
 			t.starts.push_back(std::make_pair(i,std::make_pair(0,0)));
 
-	} else {
+		
+
+	} else if (m < n){
 
 		// filter number of cars
+		if (15 * m < n){
 		kth = getKthSmallest(nTrips, t.starts, t.targets);
 		temp = t.starts;
 		t.starts.clear();
-		std::cout<<"Starts = "<<t.starts.size()<<std::endl;
+//		std::cout<<"Starts = "<<t.starts.size()<<std::endl;
 		for (int i=0; i<nCars; i++)
 		{
 			for (int j=0; j<nTrips; j++)
 			{
-				dist = pow(getdist(temp[i],t.targets[j]),2); // distance between jth start and ith target
+				dist = getdist(temp[i],t.targets[j]); // distance between jth start and ith target
 				if (dist <= kth[j]){
 					t.starts.push_back(temp[i]);
 					//std::cout << "Adding "<< i << " for "<<j<<std::endl;
@@ -162,17 +172,23 @@ std::vector<Edge> Matching::findMatching()
 		}		
 
 		n = t.starts.size();
+		adjustedCars = n;
+		delete[] kth;
+		}
 		
 		for (int i=nTrips; i<nTrips + n - m; i++)
 			t.targets.push_back(std::make_pair(i,std::make_pair(0,0)));
 
-	}
 
-	delete[] kth;
+	} 
+	t2 = clock();
+	float diff = ((float)t2) - ((float)t1);
+	float seconds = diff / CLOCKS_PER_SEC;
+//	std::cout<<"Pre Process time: "<<seconds<<std::endl;
 	//std::cout<<"num cars: "<<nCars<<std::endl;
 	//std::cout <<"num trips: "<<nTrips<<std::endl;
 	N = t.starts.size();
-	std::cout <<"N = "<<N<<std::endl;
+//	std::cout <<"N = "<<N<<std::endl;
 	return mmd_msd2(t);
 
 } 
@@ -242,6 +258,7 @@ inline void Matching::reset_flooding(int n){
 }
 
 /*
+
   Add edges in order until k nodes can be matched.
 
   edges is a sorted vector of (dist, (left, right))
@@ -476,7 +493,7 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
 
 	for (int i=0; i<t.starts.size(); i++){
 		indices.push_back(t.starts[i].first);
-		t.starts[i].first = indices.size() - 1;
+		t.starts[i].first = i;
 //		std::cout << t.starts[i].first << " is actually " << indices[t.starts[i].first]<<std::endl;
 	}
 
@@ -484,28 +501,34 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
 
 	for (int i=0; i<t.targets.size(); i++){
 		indices.push_back(t.targets[i].first);
-		t.targets[i].first = indices.size() - 1;
+		t.targets[i].first = i;
 	}
 
   }
-  std::cout<<"nTrips = "<<nTrips<<" nCars = "<<nCars<<std::endl;
-  std::cout<<"num Targets = "<<t.targets.size()<<" num Starts: "<<t.starts.size()<<std::endl;
+
+
+//  std::cout<<"nTrips = "<<nTrips<<" nCars = "<<nCars<<std::endl;
+//  std::cout<<"num Targets = "<<t.targets.size()<<" num Starts: "<<t.starts.size()<<std::endl;
   std::vector<Edge> edges;
   std::vector<Edge> answer;
   // std::cout << "Num Trips: "<< t.targets.size() << " "<< nTrips << std::endl;
   // Create edges from all pairwise distances squared
-  for(int i = 0; i < n; i++)
-    for(int j = 0; j < n; j++)
-      if ( t.starts[i].first >= nCars || t.targets[i].first >= nTrips){ // Is dummy location
+  for(int i = 0; i < n; i++){
+	
+    for(int j = 0; j < n; j++){
+      if ( t.starts[i].first >= adjustedCars || t.targets[j].first >= adjustedTrips){ // Is dummy location
 	 edges.push_back(std::make_pair(0.0,
                                      std::make_pair(t.starts[i].first, t.targets[j].first)));
-
+	
       } else {
-	double dist = pow(getdist(t.starts[i], t.targets[j]),2);
+	double dist = getdist(t.starts[i], t.targets[j]);
         edges.push_back(std::make_pair(dist,
                                      std::make_pair(t.starts[i].first, t.targets[j].first)));
-       
+        // std::cout<<dist<<" ";
 	}
+    }
+	//std::cout<<std::endl;
+  }
  std::sort(edges.begin(), edges.end());
   if (n * n != edges.size())
 	std::cout << "not enough edges"<<std::endl;
@@ -536,7 +559,7 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
   float time_diff = ((float)c2 - (float)c1);
   float seconds = time_diff / CLOCKS_PER_SEC;
 
-  std::cout<<"algorithm ran: "<< seconds <<std::endl;
+//  std::cout<<"algorithm ran: "<< seconds <<std::endl;
 
   // Convert back
   if (nTrips < nCars){

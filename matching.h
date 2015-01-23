@@ -68,6 +68,8 @@ class Matching{
 		std::vector<edge*> edge_set;
 		int nTrips;
 		int nCars;
+		int adjustedTrips;
+		int adjustedCars;
 		int N;
 		Test t;
 		

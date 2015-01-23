@@ -54,10 +54,10 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 
 
 #define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
-#define ALGORITHM SCRAM // Matching is done with either the original greedy approach or SCRAM
+#define ALGORITHM GREEDY // Matching is done with either the original greedy approach or SCRAM
 #define SPEED CONSTANT
 #define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
-#define WAIT MERGE // Refers to giving all unmatched trip equal priority or separate
+#define WAIT SEPARATE // Refers to giving all unmatched trip equal priority or separate
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV and WAIT as SEPARATE.
 * The upgraded simulator for Donna Chen's research is ran as SIZE LARGE and SIMULATOR SAEV
@@ -907,8 +907,8 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 
     for (t = startT; t < 288; t++)
     {
-	if (!warmStart)
-		cout << "Time of day: "<<t<<endl;	
+//	if (!warmStart)
+//		cout << "Time of day: "<<t<<endl;	
         carCt = 0;
         for (int xc = 0; xc < xMax; xc++)
         {
@@ -1342,7 +1342,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 //        }
     }
 
-    runSummary(warmStart, lastWarm, zoneGen, waitZones, netZoneBalance, tripO, tripD, cardDirectLZ, cardDirect, cardDirect2,  timeTripCounts);
+    //runSummary(warmStart, lastWarm, zoneGen, waitZones, netZoneBalance, tripO, tripD, cardDirectLZ, cardDirect, cardDirect2,  timeTripCounts);
 
     if (warmStart && !lastWarm)
     {
@@ -1354,6 +1354,23 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
             }
         }
     }
+
+	// Calculate true wait times
+	for(int i=0; i<6; i++)
+		waitCount[i]=0;
+	int index;
+	for (int t=0; t<288; t++){
+		for(int trp = 0; trp<TTMx[t].size(); trp++){
+			index = ((int)TTMx[t][trp].waitTime)/5 - 1;
+			if (index >= 0)
+				waitCount[index]++;
+		}
+	}
+	waitCount[4] += waitCount[5];
+	waitCount[3] += waitCount[4];
+	waitCount[2] += waitCount[3];
+	waitCount[1] += waitCount[2];
+	waitCount[0] += waitCount[1];
 
     return;
 
@@ -4689,9 +4706,9 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
 
     if (found)
     {
-        trp.carlink = true;
-	
+        trp.carlink = true;	
         waitTrav = abs(x - trp.startX) + abs(y - trp.startY);
+	
         trp.waitTime = trp.waitTime + (5.0 * waitTrav / maxDist) ;
         if (trp.waitPtr != NULL)
         {
@@ -7507,7 +7524,7 @@ void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool rep
 
                 }
         }
-
+	
 }
 
 void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts)
@@ -7558,7 +7575,8 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
         }
 	//if (time == 71 && tripList.size() == 77)
 	//	cout << "right call"<<endl;
-      cout << "num cars: " << cars.size() <<" "<<tripList.size()<< endl;
+//      cout << "Time of day: "<<time<<endl;
+//      cout << "num cars: " << cars.size() <<" "<<tripList.size()<< endl;
         if (cars.size() == 0){
         //	if (time == 71 || time == 72)
 	//		cout << "None matched cars: "<< time <<endl; 
@@ -7583,6 +7601,7 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
 //              assignCar(cars[carIndex]->x,cars[carIndex]->y, cars[carIndex]->c_value, CarMx, tripList[trip]);
                 tripList[trip].carlink = true;
                 waitTrav = abs(cars[carIndex]->x - tripList[trip].startX) + abs(cars[carIndex]->y - tripList[trip].startY);
+		//cout << "WaitTrav: "<<waitTrav<<endl;
 //              if (waitTrav > trav)
 //                      cout <<"distance: "<<waitTrav<<" > "<< trav << endl;
                 tripList[trip].waitTime = tripList[trip].waitTime + (5.0 * waitTrav / trav);
@@ -7593,7 +7612,7 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
 		}
 		
         }
-
+	
 }
 
 void assignCar (Car* c, Trip* trp)
