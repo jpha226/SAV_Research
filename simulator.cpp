@@ -53,10 +53,10 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define VARY 7
 
 
-#define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
+#define SIZE LARGE // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
 #define ALGORITHM SCRAM // Matching is done with either the original greedy approach or SCRAM
-#define SPEED CONSTANT
-#define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
+#define SPEED VARY
+#define SIMULATOR SAEV // Sets car ranges and fuel times for either electric or gas vehicles
 #define WAIT MERGE // Refers to giving all unmatched trip equal priority or separate
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV and WAIT as SEPARATE.
