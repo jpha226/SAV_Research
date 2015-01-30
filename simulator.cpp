@@ -53,10 +53,10 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define VARY 7
 
 
-#define SIZE LARGE // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
+#define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
 #define ALGORITHM SCRAM // Matching is done with either the original greedy approach or SCRAM
-#define SPEED VARY
-#define SIMULATOR SAEV // Sets car ranges and fuel times for either electric or gas vehicles
+#define SPEED CONSTANT
+#define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
 #define WAIT MERGE // Refers to giving all unmatched trip equal priority or separate
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV and WAIT as SEPARATE.
@@ -126,7 +126,7 @@ const int tripDistSize = 60;
 const int zoneSizeL = xMax / numZonesL; // 8
 const int zoneSizeS = xMax / numZonesS; // 4
 const int maxNumRuns = 1005;
-const int numWarmRuns = 15; // 20
+const int numWarmRuns = 20; // 20
 
 #if SIMULATOR == SAV
 const int carRange = 1600;//320;
@@ -139,6 +139,8 @@ const int refuelTime = 6; // 48 = 4 hours or 6 = 30 minutes
 const int refuelDist = 40; // Refuels if only 40 cells = 10 miles left, set to 0 to disable
 const int rejectLimit = 1000000000; // Set to 1000000000 to disable
 #endif
+
+vector<int> random_seeds;
 
  long totDistRun, totUnoccDistRun, totCarsRun, totTripsRun, totHSRun, totCSRun, totWaitTRun, totUnservedTRun, totUnusedRun, totUnoccRun, maxAvailCars;
     long totWaitCountRun[6];
@@ -395,6 +397,7 @@ float time_diff, seconds;
         if (numRuns > 1)
         {
             cout << "Run " << i << " completed. Time: " << seconds << endl;
+	    cout << "Random Seed: " << random_seeds[i] << endl;
         }
     }
 
@@ -557,7 +560,17 @@ void initVars (int runNum, bool warmStart)
     if (runNum == 1)
     {
         srand(rseed);
+	if (!warmStart){
+		random_seeds.clear();
+		for (int i = 0; i < numRuns; i++)
+		{
+			random_seeds.push_back(rand());
+		}
+	}
     }
+
+    if (!warmStart)
+	srand(random_seeds[runNum]);
 
     fclose(inputfile);
 
@@ -1422,6 +1435,11 @@ void placeInitCars (std::vector<Car> CarMx[][yMax],   int* timeTripCounts, doubl
                 CarMx[x][y][c].tripCt = 0;
 		CarMx[x][y][c].numRejects = 0;
 //		CarMx[x][y][c].currTrip = NULL;
+		if (SIZE == SMALL)
+		{
+			CarMx[x][y][c].gas = carRange;
+			CarMx[x][y][c].refuel = 0;
+		}
             }
         }
     }
@@ -1748,15 +1766,15 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
         totWaitCountRun[i] = totWaitCountRun[i] / numRuns;
     }
 
-    cout << "Average number of trips " << totTripsRun << "           COV: " << totTripsRunCOVF << endl;
-    cout << "Total number of unserved trips " << totUnservedTRun << "        COV: " << totUnservedTRunCOVF << endl;
+    cout << "Average number of trips " << totTripsRun << "           COV: " << totTripsRunCOVF << "\tsd: "<<totTripsRunCOVF * totTripsRun<< endl;
+    cout << "Total number of unserved trips " << totUnservedTRun << "        COV: " << totUnservedTRunCOVF << "\tsd: "<<totUnservedTRun * totUnservedTRunCOVF<< endl;
     cout << "Average number of cars " << totCarsRun << "             COV: " << totCarsRunCOVF << endl;
 //    cout << "5-minute wait intervals elapsed " << totWaitCountRun << "    COV: " << totWaitCountRunCOVF << endl;
-    cout << "Average wait time " << totAvgWait << "              COV: " << totAvgWaitCOVF  << endl;
+    cout << "Average wait time " << totAvgWait << "              COV: " << totAvgWaitCOVF  << "\tsd: "<<totAvgWait * totAvgWaitCOVF<< endl;
 //    cout << "Maximum number of trips starting during any 5 minute period " << maxTripGen << endl;
-    cout << "Average total miles traveled " << totDistRun / 4 << "     COV: " << totDistRunCOVF << endl;
-    cout << "Average total unocc mi traveled  " << totUnoccDistRun / 4 << "  COV: " << totUnoccDistRunCOVF << endl;
-    cout << "Average trip distance " << totAvgTripDist << "           COV: " << totAvgTripDistCOVF << endl;
+    cout << "Average total miles traveled " << totDistRun / 4 << "     COV: " << totDistRunCOVF << "\tsd: "<<(totDistRun / 4.0)* totDistRunCOVF<< endl;
+    cout << "Average total unocc mi traveled  " << totUnoccDistRun / 4 << "  COV: " << totUnoccDistRunCOVF << "\tsd: "<<(totUnoccDistRun / 4.0) * totUnoccDistRunCOVF<< endl;
+    cout << "Average trip distance " << totAvgTripDist << "           COV: " << totAvgTripDistCOVF << "\tsd: "<<totAvgTripDist * totAvgTripDistCOVF << endl;
     cout << "Average min number unused cars " << totUnusedRun << "       COV: " << totUnusedRunCOVF << endl;
     cout << "Average min number unoccupied cars " << totUnoccRun << "  COV: " << totUnoccRunCOVF << endl;
     cout << "Average # of hot starts " << totHSRun << "           COV: " << totHSRunCOVF << endl;

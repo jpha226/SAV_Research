@@ -1,5 +1,3 @@
-
-
 To do list:
 Verify all metrics:
 	- For SCRAM: unoccupied travel, wait time, trips served, cars required, wait time broken down by 5 minute intervals, hot & cold starts
