@@ -126,7 +126,7 @@ const int tripDistSize = 60;
 const int zoneSizeL = xMax / numZonesL; // 8
 const int zoneSizeS = xMax / numZonesS; // 4
 const int maxNumRuns = 1005;
-const int numWarmRuns = 10; // 20
+const int numWarmRuns = 20; // 20
 
 #if SIMULATOR == SAV
 const int carRange = 1600;//320;
@@ -1775,7 +1775,7 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
 //    cout << "5-minute wait intervals elapsed " << totWaitCountRun << "    COV: " << totWaitCountRunCOVF << endl;
     cout << "Average wait time " << totAvgWait << "              COV: " << totAvgWaitCOVF  << "\tsd: "<<totAvgWait * totAvgWaitCOVF<< endl;
 //    cout << "Maximum number of trips starting during any 5 minute period " << maxTripGen << endl;
-    cout << "Total number of reassigned trips: " << totTripsReassigned << endl;
+    cout << "Average number of reassigned trips: " << totTripsReassigned / (1.0 * numRuns)<< endl;
     cout << "Average total miles traveled " << totDistRun / 4 << "     COV: " << totDistRunCOVF << "\tsd: "<<(totDistRun / 4.0)* totDistRunCOVF<< endl;
     cout << "Average total unocc mi traveled  " << totUnoccDistRun / 4 << "  COV: " << totUnoccDistRunCOVF << "\tsd: "<<(totUnoccDistRun / 4.0) * totUnoccDistRunCOVF<< endl;
     cout << "Average trip distance " << totAvgTripDist << "           COV: " << totAvgTripDistCOVF << "\tsd: "<<totAvgTripDist * totAvgTripDistCOVF << endl;
@@ -7617,8 +7617,8 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
         }
 	//if (time == 71 && tripList.size() == 77)
 	//	cout << "right call"<<endl;
-      cout << "Time of day: "<<time<<endl;
-      cout << "num cars: " << cars.size() <<" "<<tripList.size()<< endl;
+//      cout << "Time of day: "<<time<<endl;
+//      cout << "num cars: " << cars.size() <<" "<<tripList.size()<< endl;
         if (cars.size() == 0){
         //	if (time == 71 || time == 72)
 	//		cout << "None matched cars: "<< time <<endl; 
