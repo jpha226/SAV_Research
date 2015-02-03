@@ -191,9 +191,9 @@ std::vector<Edge> Matching::findMatching()
 	t2 = clock();
 	float diff = ((float)t2) - ((float)t1);
 	float seconds = diff / CLOCKS_PER_SEC;
-//	std::cout<<"Pre Process time: "<<seconds<<std::endl;
-	//std::cout<<"num cars: "<<nCars<<std::endl;
-	//std::cout <<"num trips: "<<nTrips<<std::endl;
+	std::cout<<"Pre Process time: "<<seconds<<std::endl;
+	std::cout<<"num cars: "<<nCars<<std::endl;
+	std::cout <<"num trips: "<<nTrips<<std::endl;
 	N = t.starts.size();
 //	std::cout <<"N = "<<N<<std::endl;
 	return mmd_msd2(t);
@@ -524,17 +524,11 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
 	
     for(int j = 0; j < n; j++){
       if ( t.starts[i].first >= adjustedCars || t.targets[j].first >= adjustedTrips){ // Is dummy location
-	 edges.push_back(std::make_pair(0.0,
-                                     std::make_pair(t.starts[i].first, t.targets[j].first)));
+	 edges.push_back(std::make_pair(0.0, std::make_pair(t.starts[i].first, t.targets[j].first)));
 	
       } else {
-	double dist = getdist(t.starts[i], t.targets[j]);
-	if (dist < limit[t.targets[j].first])
-	        edges.push_back(std::make_pair(dist,
-                                     std::make_pair(t.starts[i].first, t.targets[j].first)));
-        else
-		edges.push_back(std::make_pair(400*n+1,
-					std::make_pair(t.starts[i].first, t.targets[j].first)));
+	  double dist = getdist(t.starts[i], t.targets[j]);
+	  edges.push_back(std::make_pair(dist, std::make_pair(t.starts[i].first, t.targets[j].first)));
 	// std::cout<<dist<<" ";
 	}
     }
@@ -556,21 +550,29 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
   c1 = clock();
   int choice = getMinimalMaxEdgeInPerfectMatching(edges, n, n);
   double max_edge_value = edges[choice].first;
-
+  
   // Now remove (make very large) all edges that are greater than max_edge_value
   for(int i = 0; i < edges.size(); i++){
     if (edges[i].first <= max_edge_value) 
       cost[edges[i].second.first][edges[i].second.second] = edges[i].first;
     else
       cost[edges[i].second.first][edges[i].second.second] = max_edge_value*n+1;
+    if (limit[edges[i].second.second] != -1 && edges[i].first > limit[edges[i].second.second])
+      cost[edges[i].second.first][edges[i].second.second] = max_edge_value*n+1;
+    if (limit[edges[i].second.second] != -1 && edges[i].second.first >= nCars)
+      cost[edges[i].second.first][edges[i].second.second] = max_edge_value*n+2;
+
+
   }
 
+  //std::cout << " cost at (100,nTrips-1) "<< cost[100][nTrips - 1]<<std::endl;
+  //std::cout << " cost at (100,37) "<< cost[100][37]<<std::endl;
   hungarian();
   c2 = clock();
   float time_diff = ((float)c2 - (float)c1);
   float seconds = time_diff / CLOCKS_PER_SEC;
 
-//  std::cout<<"algorithm ran: "<< seconds <<std::endl;
+  std::cout<<"algorithm ran: "<< seconds <<std::endl;
 
   // Convert back
   if (nTrips < nCars){
@@ -591,9 +593,14 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
     		if (t.starts[i].first < nCars && t.targets[xy[i]].first < nTrips)
 		      answer.push_back(std::make_pair(getdist(t.starts[i], t.targets[xy[i]]),
                                     std::make_pair(t.starts[i].first, indices[t.targets[xy[i]].first])));
+		
   	  }
   }
+/*  std::cout << "Reassigned Trip distance: " << getdist(t.starts[yx[nTrips - 1]], t.targets[nTrips - 1]) << std::endl;
+  std::cout << "Reassigned to: " << yx[nTrips - 1] << std::endl;
 
+  std::cout << "Reassigned Car distance: "<< getdist(t.starts[nCars - 1], t.targets[xy[nCars - 1]]) << std::endl;
+  std::cout << "Reassigned to: "<< xy[nCars -1]<<std::endl;*/
  // for(int i = 0; i < n; i++){
     //printf("Got: %d %d %lf\n", i, h2[i], getdist(t.starts[i], t.targets[h2[i]]));
 //    if (t.starts[i].first < nCars && t.targets[xy[i]].first < nTrips)

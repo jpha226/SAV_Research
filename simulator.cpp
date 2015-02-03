@@ -126,7 +126,7 @@ const int tripDistSize = 60;
 const int zoneSizeL = xMax / numZonesL; // 8
 const int zoneSizeS = xMax / numZonesS; // 4
 const int maxNumRuns = 1005;
-const int numWarmRuns = 20; // 20
+const int numWarmRuns = 10; // 20
 
 #if SIMULATOR == SAV
 const int carRange = 1600;//320;
@@ -180,6 +180,7 @@ vector<int> random_seeds;
 
     bool error, reportProcs, readFile, wStart;
     int maxTrav, maxTravC, totDist, unoccDist, waitT, saveRate, startIter, unservedT, coldStarts, hotStarts, numRuns, nCars;
+    int tripsReassigned, totTripsReassigned;
     double maxCarUse [288];
     double maxCarOcc [288];
     int waitCount[6];
@@ -450,9 +451,10 @@ void initVars (int runNum, bool warmStart)
     rseed = 0;
     hotStarts = 0;
     coldStarts = 0;
-
+    tripsReassigned = 0;
     if (runNum == 1)
     {
+	totTripsReassigned = 0;
         totDistRun = 0;
         totUnoccDistRun = 0;
         totCarsRun = 0;
@@ -1634,6 +1636,7 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
     cout << "Total number of unserved trips " << unservedT << endl;
     cout << "Total number of cars " << nCars << endl;
 //    cout << "5-minute traveler wait time intervals elapsed " << waitCount << endl;
+    cout << "Total number of trips reassigned "<< tripsReassigned << endl;
     cout << "Average wait time " << avgWait << endl;
     cout << "Total miles traveled " << totDist / 4 << endl;
     cout << "Total unoccupied miles traveled " << unoccDist / 4 << endl;
@@ -1772,6 +1775,7 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
 //    cout << "5-minute wait intervals elapsed " << totWaitCountRun << "    COV: " << totWaitCountRunCOVF << endl;
     cout << "Average wait time " << totAvgWait << "              COV: " << totAvgWaitCOVF  << "\tsd: "<<totAvgWait * totAvgWaitCOVF<< endl;
 //    cout << "Maximum number of trips starting during any 5 minute period " << maxTripGen << endl;
+    cout << "Total number of reassigned trips: " << totTripsReassigned << endl;
     cout << "Average total miles traveled " << totDistRun / 4 << "     COV: " << totDistRunCOVF << "\tsd: "<<(totDistRun / 4.0)* totDistRunCOVF<< endl;
     cout << "Average total unocc mi traveled  " << totUnoccDistRun / 4 << "  COV: " << totUnoccDistRunCOVF << "\tsd: "<<(totUnoccDistRun / 4.0) * totUnoccDistRunCOVF<< endl;
     cout << "Average trip distance " << totAvgTripDist << "           COV: " << totAvgTripDistCOVF << "\tsd: "<<totAvgTripDist * totAvgTripDistCOVF << endl;
@@ -7547,20 +7551,17 @@ void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool rep
 
 void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts)
 {
-//	if (time == 71)
-//		cout << "time is 71"<<endl;
         Matching matching;
         int trpX, trpY;
+	vector<int> reassigned;
         vector<Car*> cars;
         Car curr;
         if (tripList.size() == 0){
-        //	if (time == 71 || time == 72)
-	//		cout << "None matched trips "<< time <<endl;
 	        return;
 	}
 
         for (int trp=0; trp < tripList.size(); trp++)
-                matching.addTrip(tripList[trp].startX, tripList[trp].startY, trp, 2*SIZE);
+                matching.addTrip(tripList[trp].startX, tripList[trp].startY, trp, -1);
 
         for (int x = 0; x < xMax; x++)
         {
@@ -7589,7 +7590,9 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
                                 } else { 
 					// If car has not picked up add trip and car
 					// Else do nothing
+					
 					if (REASSIGN && (CarMx[x][y][c].pickupX != -1 || CarMx[x][y][c].pickupY != -1) && CarMx[x][y][c].refuel == 0){
+						
 						int carIndex = cars.size();
 						curr = CarMx[x][y][c];
 						Trip *trip = curr.currTrip;
@@ -7599,7 +7602,12 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
 						CarMx[x][y][c].inUse = false;
 						CarMx[x][y][c].currTrip->carlink = false;
 						tripList.push_back(*(CarMx[x][y][c].currTrip));
+						tripList[tripList.size() - 1].waitPtr = CarMx[c][y][c].currTrip;
 						matching.addTrip(trip->startX,trip->startY,tripList.size() - 1, dist);
+						reassigned.push_back(tripList.size() - 1);
+
+						totTripsReassigned++;
+						tripsReassigned++;
 					}
 
 				}
@@ -7609,8 +7617,8 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
         }
 	//if (time == 71 && tripList.size() == 77)
 	//	cout << "right call"<<endl;
-//      cout << "Time of day: "<<time<<endl;
-//      cout << "num cars: " << cars.size() <<" "<<tripList.size()<< endl;
+      cout << "Time of day: "<<time<<endl;
+      cout << "num cars: " << cars.size() <<" "<<tripList.size()<< endl;
         if (cars.size() == 0){
         //	if (time == 71 || time == 72)
 	//		cout << "None matched cars: "<< time <<endl; 
@@ -7630,17 +7638,12 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
                 trip = (*it).second.second;
                 assignCar(cars[carIndex], &tripList[trip]);
 		cars[carIndex]->currTrip = &tripList[trip];
-	//	if (tripList[trip].startTime == 71)
-	//		cout << "Time is 71"<<endl;
-//              assignCar(cars[carIndex]->x,cars[carIndex]->y, cars[carIndex]->c_value, CarMx, tripList[trip]);
+
                 tripList[trip].carlink = true;
                 waitTrav = abs(cars[carIndex]->x - tripList[trip].startX) + abs(cars[carIndex]->y - tripList[trip].startY);
 		if (waitTrav > trav)
 			cout << "Exceeding max travel: "<<waitTrav <<" "<<trav<<endl;
 
-		//cout << "WaitTrav: "<<waitTrav<<endl;
-//              if (waitTrav > trav)
-//                      cout <<"distance: "<<waitTrav<<" > "<< trav << endl;
                 tripList[trip].waitTime = tripList[trip].waitTime + (5.0 * waitTrav / trav);
                 if (tripList[trip].waitPtr != NULL){
                         tripList[trip].waitPtr -> waitTime = tripList[trip].waitTime;
@@ -7649,6 +7652,11 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
 		}
 		
         }
+	for (int i=0; i<reassigned.size(); i++)
+	{
+		if ( tripList[reassigned[i]].carlink == false )
+			cout << "Trip lost car: " << reassigned[i]<<" Time: "<<time<<endl;
+	}
 	
 }
 
