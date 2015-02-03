@@ -23,6 +23,14 @@ struct edge{
 
 };
 
+struct point{
+	
+	int id;
+	int limit;
+	std::pair<int, int> coord;
+
+};
+
 typedef std::pair<int, std::pair<int, int> > Point;
 
 // Edge looks like (dist, (left node, right node))

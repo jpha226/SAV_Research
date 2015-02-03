@@ -51,7 +51,7 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define SEPARATE 5
 #define CONSTANT 6
 #define VARY 7
-
+#define REASSIGN 1
 
 #define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
 #define ALGORITHM SCRAM // Matching is done with either the original greedy approach or SCRAM
@@ -7560,7 +7560,7 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
 	}
 
         for (int trp=0; trp < tripList.size(); trp++)
-                matching.addTrip(tripList[trp].startX, tripList[trp].startY, trp, -1);
+                matching.addTrip(tripList[trp].startX, tripList[trp].startY, trp, 2*SIZE);
 
         for (int x = 0; x < xMax; x++)
         {
@@ -7586,7 +7586,23 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
                                         if (carIndex == cars.size())
                                                 cars.push_back(&CarMx[x][y][c]);
                                         matching.addCar(x,y,carIndex);
-                                }
+                                } else { 
+					// If car has not picked up add trip and car
+					// Else do nothing
+					if (REASSIGN && (CarMx[x][y][c].pickupX != -1 || CarMx[x][y][c].pickupY != -1) && CarMx[x][y][c].refuel == 0){
+						int carIndex = cars.size();
+						curr = CarMx[x][y][c];
+						Trip *trip = curr.currTrip;
+						cars.push_back(&CarMx[x][y][c]);
+						matching.addCar(x,y,carIndex);
+						int dist = abs(curr.x - trip->startX) + abs(curr.y - trip->startY);
+						CarMx[x][y][c].inUse = false;
+						CarMx[x][y][c].currTrip->carlink = false;
+						tripList.push_back(*(CarMx[x][y][c].currTrip));
+						matching.addTrip(trip->startX,trip->startY,tripList.size() - 1, dist);
+					}
+
+				}
                         }
                 }
 
@@ -7619,6 +7635,9 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
 //              assignCar(cars[carIndex]->x,cars[carIndex]->y, cars[carIndex]->c_value, CarMx, tripList[trip]);
                 tripList[trip].carlink = true;
                 waitTrav = abs(cars[carIndex]->x - tripList[trip].startX) + abs(cars[carIndex]->y - tripList[trip].startY);
+		if (waitTrav > trav)
+			cout << "Exceeding max travel: "<<waitTrav <<" "<<trav<<endl;
+
 		//cout << "WaitTrav: "<<waitTrav<<endl;
 //              if (waitTrav > trav)
 //                      cout <<"distance: "<<waitTrav<<" > "<< trav << endl;

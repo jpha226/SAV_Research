@@ -71,7 +71,9 @@ void Matching::addCar(int x, int y, int id){t.starts.push_back(std::make_pair(id
 void Matching::addTrip(int x, int y, int id, int l){
 
 	t.targets.push_back(std::make_pair(id,std::make_pair(x, y)));
-	limit.push_back(-1);
+	limit.push_back(l);
+	if (id != limit.size() - 1)
+		std::cout<< " id error" <<std::endl;
 }
 
 // k must be less than or equal to smaller of number of trips or cars
@@ -527,9 +529,13 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
 	
       } else {
 	double dist = getdist(t.starts[i], t.targets[j]);
-        edges.push_back(std::make_pair(dist,
+	if (dist < limit[t.targets[j].first])
+	        edges.push_back(std::make_pair(dist,
                                      std::make_pair(t.starts[i].first, t.targets[j].first)));
-        // std::cout<<dist<<" ";
+        else
+		edges.push_back(std::make_pair(400*n+1,
+					std::make_pair(t.starts[i].first, t.targets[j].first)));
+	// std::cout<<dist<<" ";
 	}
     }
 	//std::cout<<std::endl;
