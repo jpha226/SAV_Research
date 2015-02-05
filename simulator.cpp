@@ -54,10 +54,11 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define REASSIGN 1
 
 #define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
-#define ALGORITHM SCRAM // Matching is done with either the original greedy approach or SCRAM
+#define ALGORITHM GREEDY // Matching is done with either the original greedy approach or SCRAM
 #define SPEED CONSTANT
 #define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
-#define WAIT MERGE // Refers to giving all unmatched trip equal priority or separate
+#define WAIT SEPARATE // Refers to giving all unmatched trip equal priority or separate
+
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV and WAIT as SEPARATE.
 * The upgraded simulator for Donna Chen's research is ran as SIZE LARGE and SIMULATOR SAEV
@@ -126,7 +127,7 @@ const int tripDistSize = 60;
 const int zoneSizeL = xMax / numZonesL; // 8
 const int zoneSizeS = xMax / numZonesS; // 4
 const int maxNumRuns = 1005;
-const int numWarmRuns = 20; // 20
+const int numWarmRuns = 5; // 20
 
 #if SIMULATOR == SAV
 const int carRange = 1600;//320;
@@ -179,7 +180,7 @@ vector<int> random_seeds;
     double totPctColdShareCOV [maxNumRuns];
 
     bool error, reportProcs, readFile, wStart;
-    int maxTrav, maxTravC, totDist, unoccDist, waitT, saveRate, startIter, unservedT, coldStarts, hotStarts, numRuns, nCars;
+    int maxTrav, maxTravC, totDist, unoccDist, waitT, saveRate, startIter, unservedT, coldStarts, hotStarts, numRuns, nCars, randomSeed;
     int tripsReassigned, totTripsReassigned;
     double maxCarUse [288];
     double maxCarOcc [288];
@@ -215,6 +216,8 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
                          double* totUnoccRunCOV, double* totAvgWaitCOV, double* totAvgTripDistCOV,  double* totStartsPerTripCOV, double* totAvgTripsPerCarCOV,
                          double totWaitCOV, double totTripDistCOV, double totCarTripsCOV, double* totPctMaxWaitFiveCOV, double* totPctInducedTCOV,
                          double* totPctMaxInUseCOV, double* totPctMaxOccCOV, double* totPctColdShareCOV, int numRuns);
+
+void reportMatchingResults();
 
 //functions called in initVars
 void setStartTimes(double startTimes [288]);
@@ -305,10 +308,12 @@ void assignCar (Car* c, Trip* trp);
 
 // Begin Program **************************************************************************************************
 
-int main()
+int main(int argc, char* argv[])
 {
 //	cout << "main begins"<<endl;
-  
+	randomSeed = -1;
+	if (argc > 1)
+		randomSeed = atoi(argv[1]);
 	    
 strcpy(zName, "Warm Zones.txt");
 clock_t t1,t2;
@@ -380,6 +385,11 @@ float time_diff, seconds;
     for (int i = 1; i <= numRuns; i++)
     {
 	initVars(i,false);
+	if (randomSeed == -1)
+		cout << "Run: "<<i<<" seed: "<< random_seeds[i-1] <<endl;
+	else
+		cout << "Run: "<<i<<" seed: "<< randomSeed <<endl;
+	
         placeInitCars (CarMx,   timeTripCounts, maxCarUse, maxCarOcc, totDist, unoccDist, waitT, dwLookup, reportProcs, hotStarts, coldStarts);
         generateTrips ();
 	t1 = clock();
@@ -388,18 +398,19 @@ float time_diff, seconds;
 	t2 = clock();
 	time_diff = ((float)t2 - (float)t1);
 	seconds = time_diff / CLOCKS_PER_SEC;
-        reportResults ( timeTripCounts, CarMx,  maxCarUse, maxCarOcc, totDist, unoccDist, waitT, unservedT, waitCount, hotStarts, coldStarts,
+        reportMatchingResults();
+	/*reportResults ( timeTripCounts, CarMx,  maxCarUse, maxCarOcc, totDist, unoccDist, waitT, unservedT, waitCount, hotStarts, coldStarts,
                        totDistRun, totUnoccDistRun, totCarsRun, totTripsRun, totHSRun, totCSRun, totWaitTRun, totUnservedTRun, totWaitCountRun,
                        totUnusedRun, totUnoccRun, totAvgWait, totAvgTripDist, totDistRunCOV, totUnoccDistRunCOV, totCarsRunCOV, totTripsRunCOV,
                        totHSRunCOV, totCSRunCOV, totWaitTRunCOV, totUnservedTRunCOV, totWaitCountRunCOV, totUnusedRunCOV, totUnoccRunCOV,
                        totAvgWaitCOV, totAvgTripDistCOV, totStartsPerTripCOV, totAvgTripsPerCarCOV, totWaitCOV, totTripDistCOV, totCarTripsCOV,
-                       totPctMaxWaitFiveCOV, totPctInducedTCOV, totPctMaxInUseCOV, totPctMaxOccCOV, totPctColdShareCOV, numRuns, i);
-
-        if (numRuns > 1)
-        {
-            cout << "Run " << i << " completed. Time: " << seconds << endl;
-	    cout << "Random Seed: " << random_seeds[i] << endl;
-        }
+                       totPctMaxWaitFiveCOV, totPctInducedTCOV, totPctMaxInUseCOV, totPctMaxOccCOV, totPctColdShareCOV, numRuns, i);*/
+	cout << "Completion time: " <<seconds << endl;
+//        if (numRuns > 1)
+  //      {
+    //        cout << "Run " << i << " completed. Time: " << seconds << endl;
+//	    cout << "Random Seed: " << random_seeds[i] << endl;
+  //      }
     }
 
     if (numRuns > 1)
@@ -561,7 +572,7 @@ void initVars (int runNum, bool warmStart)
 
     if (runNum == 1)
     {
-        srand(rseed);
+	srand(rseed);
 	if (!warmStart){
 		random_seeds.clear();
 		for (int i = 0; i < numRuns; i++)
@@ -573,6 +584,8 @@ void initVars (int runNum, bool warmStart)
 
     if (!warmStart)
 	srand(random_seeds[runNum]);
+    if(!warmStart && runNum ==1)
+	srand(randomSeed);
 
     fclose(inputfile);
 
@@ -933,7 +946,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
             }
         }
 
-        if (nRuns == 1)
+ /*       if (nRuns == 1)
         {
             cout << "T = " << t << ", trips = " << timeTripCounts[t] << ", numCars = " << carCt << ", Delay = ";
             for (int w = 0; w < 6; w++)
@@ -941,7 +954,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                 cout << waitListI[w] << ",";
             }
             cout << endl;
-        }
+        } */
 
         // set vehicle to track
         if (t == 0 && !warmStart)
@@ -1437,11 +1450,11 @@ void placeInitCars (std::vector<Car> CarMx[][yMax],   int* timeTripCounts, doubl
                 CarMx[x][y][c].tripCt = 0;
 		CarMx[x][y][c].numRejects = 0;
 //		CarMx[x][y][c].currTrip = NULL;
-		if (SIZE == SMALL)
-		{
-			CarMx[x][y][c].gas = carRange;
-			CarMx[x][y][c].refuel = 0;
-		}
+//		if (RUN == RESET)
+//		{
+//			CarMx[x][y][c].gas = carRange;
+//			CarMx[x][y][c].refuel = 0;
+//		}
             }
         }
     }
@@ -1661,7 +1674,7 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
     if (nRuns == 1)
     {
         cout << "Press any key and enter to exit." << endl;
-        cin >> dummyStr;
+    //    cin >> dummyStr;
     }
 
     totTripsRun = totTripsRun + nTrips;
@@ -7592,7 +7605,7 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
 					// Else do nothing
 					
 					if (REASSIGN && (CarMx[x][y][c].pickupX != -1 || CarMx[x][y][c].pickupY != -1) && CarMx[x][y][c].refuel == 0){
-						
+												
 						int carIndex = cars.size();
 						curr = CarMx[x][y][c];
 						Trip *trip = curr.currTrip;
@@ -7605,7 +7618,7 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
 						tripList[tripList.size() - 1].waitPtr = CarMx[c][y][c].currTrip;
 						matching.addTrip(trip->startX,trip->startY,tripList.size() - 1, dist);
 						reassigned.push_back(tripList.size() - 1);
-
+						cout << "Trip readded to list" << endl;
 						totTripsReassigned++;
 						tripsReassigned++;
 					}
@@ -7617,8 +7630,8 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
         }
 	//if (time == 71 && tripList.size() == 77)
 	//	cout << "right call"<<endl;
-//      cout << "Time of day: "<<time<<endl;
-//      cout << "num cars: " << cars.size() <<" "<<tripList.size()<< endl;
+      cout << "Time of day: "<<time<<endl;
+      cout << "num cars: " << cars.size() <<" "<<tripList.size()<< endl;
         if (cars.size() == 0){
         //	if (time == 71 || time == 72)
 	//		cout << "None matched cars: "<< time <<endl; 
@@ -7712,3 +7725,76 @@ void assignCar (Car* c, Trip* trp)
     return;
 }
 
+void reportMatchingResults()
+{
+
+    int nCars = 0;
+    int nTrips = 0;
+    int maxTripGen = 0;
+    char dummyStr[20];
+
+    double waitCOV = 0;
+    double tripDistCOV = 0;
+    double carTripsCOV = 0;
+    double avgWait = 0;
+    double avgDist = 0;
+    double avgTrips = 0;
+
+    double totWaitCount = 0;
+    double maxCarUseT = 20000;
+    double maxCarOccT = 20000;
+
+    // determine num cars
+    for (int x = 0; x < xMax; x++)
+    {
+        for (int y = 0; y < yMax; y++)
+        {
+            nCars = nCars + CarMx[x][y].size();
+        }
+    }
+	
+   // get coefficient of variation
+    for (int t = 0; t < 288; t++)
+    {
+
+        nTrips = nTrips + TTMx[t].size();
+
+        if (TTMx[t].size() > maxTripGen)
+                maxTripGen = TTMx[t].size();
+
+        for (int trp = 0; trp < TTMx[t].size(); trp++)
+        {
+            avgWait = avgWait + TTMx[t][trp].waitTime;
+            avgDist = avgDist + TTMx[t][trp].tripDist;
+        }
+    }
+
+/*
+    for (int x = 0; x < xMax; x++)
+    {
+        for (int y = 0; y < yMax; y++)
+        {
+            for (int c = 0; c < CarMx[x][y].size(); c++)
+            {
+                avgTrips = avgTrips + CarMx[x][y][c].tripCt;
+            }
+        }
+    }*/
+
+    avgWait = avgWait;// / nTrips;
+    avgDist = avgDist;// / nTrips;
+//    avgTrips = avgTrips / nCars;
+
+
+	cout << "Number of trips: " << nTrips << endl;
+	cout << "Number of cars: " << nCars << endl;
+	cout << "Unoccupied travel: " << unoccDist / 4.0<< endl;
+	cout << "Total Travel: " << avgDist << endl;
+	cout << "Total wait time: " << avgWait << endl;
+	cout << "Unserved trips: " << unservedT << endl;
+	cout << "Reassigned trips: " << tripsReassigned << endl;
+	
+	for (int i=0; i < 6; i++){
+		cout << "Wait " << 5*(i+1) << " " << waitCount[i] << endl;
+	}
+}

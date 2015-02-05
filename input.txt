@@ -11,5 +11,5 @@ saveRate=0
 readFile=0
 rseed=104
 readName=CarStatus29W.txt
-numRuns=30
+numRuns=1
 

@@ -13,6 +13,9 @@ using namespace std;
 
 int main(int argc, char* argv[]){
 
+	if (argc != 4)
+		return 0;
+
 	Matching matching;
 	srand(atoi(argv[3]));
 	int n = atoi(argv[1]);
@@ -27,13 +30,20 @@ int main(int argc, char* argv[]){
 		matching.addTrip(rand() % 40,rand() % 40, i, -1);
 	}
 
-	int x = rand() % 40;
-	int y = rand() % 40;
-	int offset = 1;
-	matching.addTrip(x,y, m, offset);
-	matching.addCar(x+offset,y,n);
+	int x;
+	int y;
+	int offset[] = {1,2,5,1,3,5,2,4,2,1};
+	int nr = 10;	
 
-	matching.setDimensions(n+1,m+1);
+
+	for ( int i = 0; i < nr; i++){
+		x = rand() % 40;
+		y = rand() % 40;	
+		matching.addTrip(x,y, m+i, offset[i]);
+		matching.addCar(x+offset[i],y,n);
+	}
+
+	matching.setDimensions(n+nr,m+nr);
 	
 	clock_t t1,t2;
 	t1 = clock();
@@ -44,8 +54,10 @@ int main(int argc, char* argv[]){
         {
                 carIndex = (*it).second.first;
                 trip = (*it).second.second;
-		if (trip == m)
-			cout << "Distance: " << (*it).first <<endl;
+
+		for ( int i=0; i<nr; i++)
+			if (trip == m+i)
+				cout << "Distance for " << trip << ": " << (*it).first << " from "<< offset[trip - m]<<endl;
 	}
 
 	float diff = ((float)t2) - ((float)t1);

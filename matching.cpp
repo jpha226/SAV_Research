@@ -191,9 +191,9 @@ std::vector<Edge> Matching::findMatching()
 	t2 = clock();
 	float diff = ((float)t2) - ((float)t1);
 	float seconds = diff / CLOCKS_PER_SEC;
-//	std::cout<<"Pre Process time: "<<seconds<<std::endl;
-//	std::cout<<"num cars: "<<nCars<<std::endl;
-//	std::cout <<"num trips: "<<nTrips<<std::endl;
+	std::cout<<"Pre Process time: "<<seconds<<std::endl;
+	std::cout<<"num cars: "<<nCars<<std::endl;
+	std::cout <<"num trips: "<<nTrips<<std::endl;
 	N = t.starts.size();
 //	std::cout <<"N = "<<N<<std::endl;
 	return mmd_msd2(t);
@@ -504,7 +504,7 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
 //		std::cout << t.starts[i].first << " is actually " << indices[t.starts[i].first]<<std::endl;
 	}
 
-  } else if (nCars < nTrips){
+  } else if (nCars <= nTrips){
 
 	for (int i=0; i<t.targets.size(); i++){
 		indices.push_back(t.targets[i].first);
@@ -560,19 +560,19 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
     if (limit[edges[i].second.second] != -1 && edges[i].first > limit[edges[i].second.second])
       cost[edges[i].second.first][edges[i].second.second] = max_edge_value*n+1;
     if (limit[edges[i].second.second] != -1 && edges[i].second.first >= nCars)
-      cost[edges[i].second.first][edges[i].second.second] = max_edge_value*n+2;
+      cost[edges[i].second.first][edges[i].second.second] = max_edge_value*n+1;
 
 
   }
 
-  //std::cout << " cost at (100,nTrips-1) "<< cost[100][nTrips - 1]<<std::endl;
-  //std::cout << " cost at (100,37) "<< cost[100][37]<<std::endl;
+//  std::cout << " cost at (100,nTrips-1) "<< cost[100][nTrips - 1]<<std::endl;
+//  std::cout << " cost at (100,37) "<< cost[100][37]<<std::endl;
   hungarian();
   c2 = clock();
   float time_diff = ((float)c2 - (float)c1);
   float seconds = time_diff / CLOCKS_PER_SEC;
 
- // std::cout<<"algorithm ran: "<< seconds <<std::endl;
+  std::cout<<"algorithm ran: "<< seconds <<std::endl;
 
   // Convert back
   if (nTrips < nCars){
@@ -586,7 +586,7 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
                                     std::make_pair(indices[t.starts[i].first], t.targets[xy[i]].first)));
   	}
 
-  } else if (nCars < nTrips){
+  } else if (nCars <= nTrips){
 
 	  for(int i = 0; i < n; i++){
 	    //printf("Got: %d %d %lf\n", i, h2[i], getdist(t.starts[i], t.targets[h2[i]]));
@@ -596,7 +596,8 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
 		
   	  }
   }
-/*  std::cout << "Reassigned Trip distance: " << getdist(t.starts[yx[nTrips - 1]], t.targets[nTrips - 1]) << std::endl;
+
+ /* std::cout << "Reassigned Trip distance: " << getdist(t.starts[yx[nTrips - 1]], t.targets[nTrips - 1]) << std::endl;
   std::cout << "Reassigned to: " << yx[nTrips - 1] << std::endl;
 
   std::cout << "Reassigned Car distance: "<< getdist(t.starts[nCars - 1], t.targets[xy[nCars - 1]]) << std::endl;
