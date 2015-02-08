@@ -51,12 +51,12 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define SEPARATE 5
 #define CONSTANT 6
 #define VARY 7
-#define REASSIGN 1
+#define REASSIGN 0
 
-#define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
+#define SIZE LARGE // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
 #define ALGORITHM GREEDY // Matching is done with either the original greedy approach or SCRAM
 #define SPEED CONSTANT
-#define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
+#define SIMULATOR SAEV // Sets car ranges and fuel times for either electric or gas vehicles
 #define WAIT SEPARATE // Refers to giving all unmatched trip equal priority or separate
 
 /****
@@ -104,6 +104,14 @@ struct Car
     Trip* currTrip;
 };
 
+struct Fuel
+{
+	int x;
+	int y;
+	int numCharges;
+	int maxUseTime;
+}
+
 const int xMax = SIZE;
 const int yMax = xMax; // 40
 const int TTMxSize = 4000;
@@ -130,7 +138,7 @@ const int maxNumRuns = 1005;
 const int numWarmRuns = 5; // 20
 
 #if SIMULATOR == SAV
-const int carRange = 1600;//320;
+const int carRange = 1600; //1600;//320;
 const int refuelTime = 2; // 48 -- should be two for normal
 const int refuelDist = 0; //40
 const int rejectLimit = 1000000000; // Really high means it won't be used
@@ -148,6 +156,8 @@ vector<int> random_seeds;
 
     std::vector<Car> CarMx[xMax][yMax];
     std::vector<Trip> TTMx[288];
+    int cellChargeCount [xMax][yMax];
+    int cellChargeTime [xMax][yMax];
     int timeTripCounts [288]; // array noting number of trips in each time bin
     double startTimes [288];
     double tripDist [tripDistSize];
@@ -445,6 +455,13 @@ void initVars (int runNum, bool warmStart)
     nearRate = -1;
     exurbanRate = -1;
     maxTrav = -1;
+
+    for (int x=0; x<xMax; x++)
+	for (int y=0; y<xMax; y++)
+	{
+		cellChargeCount[x][y] = 0;
+		cellChargeTime[x][y] = 0;
+	}
 
     for(int t = 0; t < 288; t++)
     {
@@ -1351,7 +1368,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                     {
                         CarMx[x][y][c].refuel--;
                         CarMx[x][y][c].gas = carRange;
-
+			cellChargeTime[x][y] ++;
                         if (CarMx[x][y][c].refuel == 0)
                         {
                             CarMx[x][y][c].inUse = false;
@@ -7072,6 +7089,7 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
         {
             tCar.refuel = refuelTime; // Changed to 48 from 2 (wait time is now 4 hours instead of 10 minutes)
             tCar.inUse = true;
+	    cellChargeCount[tCar.x][tCar.y]++;
         }
     }
 
