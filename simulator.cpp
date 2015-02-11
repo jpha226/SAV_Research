@@ -53,11 +53,11 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define VARY 7
 #define REASSIGN 0
 
-#define SIZE LARGE // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
-#define ALGORITHM GREEDY // Matching is done with either the original greedy approach or SCRAM
+#define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
+#define ALGORITHM SCRAM // Matching is done with either the original greedy approach or SCRAM
 #define SPEED CONSTANT
-#define SIMULATOR SAEV // Sets car ranges and fuel times for either electric or gas vehicles
-#define WAIT SEPARATE // Refers to giving all unmatched trip equal priority or separate
+#define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
+#define WAIT MERGE // Refers to giving all unmatched trip equal priority or separate
 
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV and WAIT as SEPARATE.
@@ -104,13 +104,16 @@ struct Car
     Trip* currTrip;
 };
 
-struct Fuel
+struct Station
 {
 	int x;
 	int y;
+	int startX;
+	int startY;
 	int numCharges;
-	int maxUseTime;
-}
+	int chargeTime;
+	int unoccupiedDist;
+};
 
 const int xMax = SIZE;
 const int yMax = xMax; // 40
@@ -135,7 +138,7 @@ const int tripDistSize = 60;
 const int zoneSizeL = xMax / numZonesL; // 8
 const int zoneSizeS = xMax / numZonesS; // 4
 const int maxNumRuns = 1005;
-const int numWarmRuns = 5; // 20
+const int numWarmRuns = 20; // 20
 
 #if SIMULATOR == SAV
 const int carRange = 1600; //1600;//320;
@@ -158,6 +161,7 @@ vector<int> random_seeds;
     std::vector<Trip> TTMx[288];
     int cellChargeCount [xMax][yMax];
     int cellChargeTime [xMax][yMax];
+    int chargeCongestionCount [xMax][yMax];
     int timeTripCounts [288]; // array noting number of trips in each time bin
     double startTimes [288];
     double tripDist [tripDistSize];
@@ -7667,27 +7671,31 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
         {
                 carIndex = (*it).second.first;
                 trip = (*it).second.second;
-                assignCar(cars[carIndex], &tripList[trip]);
-		cars[carIndex]->currTrip = &tripList[trip];
-
-                tripList[trip].carlink = true;
                 waitTrav = abs(cars[carIndex]->x - tripList[trip].startX) + abs(cars[carIndex]->y - tripList[trip].startY);
-		if (waitTrav > trav)
-			cout << "Exceeding max travel: "<<waitTrav <<" "<<trav<<endl;
 
-                tripList[trip].waitTime = tripList[trip].waitTime + (5.0 * waitTrav / trav);
-                if (tripList[trip].waitPtr != NULL){
-                        tripList[trip].waitPtr -> waitTime = tripList[trip].waitTime;
-			tripList[trip].waitPtr -> carlink = true;
-			cars[carIndex]->currTrip = tripList[trip].waitPtr;
+		if (waitTrav <= trav){
+
+	                assignCar(cars[carIndex], &tripList[trip]);
+			cars[carIndex]->currTrip = &tripList[trip];
+
+                	tripList[trip].carlink = true;
+                	//waitTrav = abs(cars[carIndex]->x - tripList[trip].startX) + abs(cars[carIndex]->y - tripList[trip].startY);
+			if (waitTrav > trav)
+				cout << "Exceeding max travel: "<<waitTrav <<" "<<trav<<endl;
+
+	                tripList[trip].waitTime = tripList[trip].waitTime + (5.0 * waitTrav / trav);
+        	        if (tripList[trip].waitPtr != NULL){
+                	        tripList[trip].waitPtr -> waitTime = tripList[trip].waitTime;
+				tripList[trip].waitPtr -> carlink = true;
+				cars[carIndex]->currTrip = tripList[trip].waitPtr;
+			}
 		}
-		
         }
-	for (int i=0; i<reassigned.size(); i++)
-	{
-		if ( tripList[reassigned[i]].carlink == false )
-			cout << "Trip lost car: " << reassigned[i]<<" Time: "<<time<<endl;
-	}
+//	for (int i=0; i<reassigned.size(); i++)
+//	{
+//		if ( tripList[reassigned[i]].carlink == false )
+//			cout << "Trip lost car: " << reassigned[i]<<" Time: "<<time<<endl;
+//	}
 	
 }
 
