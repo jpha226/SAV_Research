@@ -53,7 +53,7 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define VARY 7
 #define REASSIGN 0
 
-#define SIZE LARGE // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
+#define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
 #define ALGORITHM GREEDY // Matching is done with either the original greedy approach or SCRAM
 #define SPEED CONSTANT
 #define SIMULATOR SAEV // Sets car ranges and fuel times for either electric or gas vehicles
@@ -147,9 +147,9 @@ const int refuelDist = 0; //40
 const int rejectLimit = 1000000000; // Really high means it won't be used
 #else
 const int carRange = 320; // 320 = 80 miles or 1000 = 250 miles
-const int refuelTime = 6; // 48 = 4 hours or 6 = 30 minutes
+const int refuelTime = 48; // 48 = 4 hours or 6 = 30 minutes
 const int refuelDist = 40; // Refuels if only 40 cells = 10 miles left, set to 0 to disable
-const int rejectLimit = 1000000000; // Set to 1000000000 to disable
+const int rejectLimit = 1; // Set to 1000000000 to disable
 #endif
 
 vector<int> random_seeds;
@@ -304,9 +304,7 @@ void writeNumCars(ofstream& outfile);
 void writeCarMx(ofstream& outfile,  std::vector<Car> CarMx[][yMax]);
 void writeNumFreeCars(ofstream& outfile,  std::vector<Car> CarMx[][yMax]);
 void writeMaxCarUse(double* maxCarUse, double* maxCarOcc);
-void writeCellCharge();
-void writeCellChargeTime();
-void writeCellCongestion();
+void writeChargeStats(int stat);
 
 void readTimeTripCounts(ifstream& infile, int* timeTripCounts);
 void readTimeTripMatrix(ifstream& infile, int* timeTripCounts);
@@ -415,13 +413,13 @@ float time_diff, seconds;
 	t2 = clock();
 	time_diff = ((float)t2 - (float)t1);
 	seconds = time_diff / CLOCKS_PER_SEC;
-        reportMatchingResults();
-	/*reportResults ( timeTripCounts, CarMx,  maxCarUse, maxCarOcc, totDist, unoccDist, waitT, unservedT, waitCount, hotStarts, coldStarts,
+//        reportMatchingResults();
+	reportResults ( timeTripCounts, CarMx,  maxCarUse, maxCarOcc, totDist, unoccDist, waitT, unservedT, waitCount, hotStarts, coldStarts,
                        totDistRun, totUnoccDistRun, totCarsRun, totTripsRun, totHSRun, totCSRun, totWaitTRun, totUnservedTRun, totWaitCountRun,
                        totUnusedRun, totUnoccRun, totAvgWait, totAvgTripDist, totDistRunCOV, totUnoccDistRunCOV, totCarsRunCOV, totTripsRunCOV,
                        totHSRunCOV, totCSRunCOV, totWaitTRunCOV, totUnservedTRunCOV, totWaitCountRunCOV, totUnusedRunCOV, totUnoccRunCOV,
                        totAvgWaitCOV, totAvgTripDistCOV, totStartsPerTripCOV, totAvgTripsPerCarCOV, totWaitCOV, totTripDistCOV, totCarTripsCOV,
-                       totPctMaxWaitFiveCOV, totPctInducedTCOV, totPctMaxInUseCOV, totPctMaxOccCOV, totPctColdShareCOV, numRuns, i);*/
+                       totPctMaxWaitFiveCOV, totPctInducedTCOV, totPctMaxInUseCOV, totPctMaxOccCOV, totPctColdShareCOV, numRuns, i);
 	cout << "Completion time: " <<seconds << endl;
 //        if (numRuns > 1)
   //      {
@@ -438,6 +436,13 @@ float time_diff, seconds;
                            totAvgWaitCOV, totAvgTripDistCOV, totStartsPerTripCOV, totAvgTripsPerCarCOV, totWaitCOV, totTripDistCOV, totCarTripsCOV,
                            totPctMaxWaitFiveCOV, totPctInducedTCOV, totPctMaxInUseCOV, totPctMaxOccCOV, totPctColdShareCOV, numRuns);
     }
+
+    cout << "Cell Charge Counts "<<endl;
+    writeChargeStats(0);
+    cout << "Cell Charge Time " <<endl;
+    writeChargeStats(1);
+    cout << "Cell Congestion Counts" <<endl;
+    writeChargeStats(2);
 
     return 0;
 }
@@ -588,6 +593,7 @@ void initVars (int runNum, bool warmStart)
         }
     }
 
+    fclose(inputfile);
     if (runNum == 1)
     {
 	srand(rseed);
@@ -626,7 +632,7 @@ void initVars (int runNum, bool warmStart)
     if(!warmStart && runNum ==1)
 	srand(randomSeed);
 
-    fclose(inputfile);
+    //fclose(inputfile);
 
     if (readFile)
     {
@@ -7327,15 +7333,107 @@ void writeMaxCarUse(double* maxCarUse, double* maxCarOcc)
     return;
 }
 
-void writeCellCharge(){
+void writeChargeStats(int stat){
 
-	ofstream outfile;
-	outfile.open("cellChargeCount.txt")
-	for (int x=0; x<
+	ofstream avgfile, sdfile;
+	float average[xMax][yMax];
+	float sd[xMax][yMax];
+	float zoneAverage[numZonesL][numZonesL];
+
+	for (int x=0; x< xMax; x++){
+		for (int y=0; y<yMax; y++){
+			average[x][y] = 0.0;
+			sd[x][y] = 0.0;
+			zoneAverage[x / zoneSizeL][y / zoneSizeL] = 0.0;
+		}
+	}
+
+	// Compute average
+	for (int x=0; x<xMax; x++){
+
+		for (int y=0; y<yMax; y++){
+
+			for (int n=0; n < numRuns; n++){
+
+				if (stat == 0){
+					average[x][y] += cellChargeCount[x][y][n];
+					zoneAverage[x / zoneSizeL][y / zoneSizeL] += cellChargeCount[x][y][n];
+				}
+				if (stat == 1){
+					average[x][y] += cellChargeTime[x][y][n];
+					zoneAverage[x / zoneSizeL][y / zoneSizeL] += cellChargeTime[x][y][n];
+				}
+				if (stat == 2){
+					average[x][y] += chargeCongestionCount[x][y][n];
+					zoneAverage[x / zoneSizeL][y / zoneSizeL] += chargeCongestionCount[x][y][n];
+				}
+			}
+
+			average[x][y] /= numRuns;
+
+		}
+
+	}
+	
+	// Compute standard deviation
+	for (int x=0; x < xMax; x++) {
+
+		for (int y=0; y<yMax; y++) {
+
+			for (int n=0; n<numRuns; n++){
+
+				if (stat == 0)
+					sd[x][y] += pow(cellChargeCount[x][y][n] - average[x][y],2);
+				if (stat == 1)
+					sd[x][y] += pow(cellChargeTime[x][y][n] - average[x][y],2);
+				if (stat == 2)
+					sd[x][y] += pow(chargeCongestionCount[x][y][n] - average[x][y],2);
+			}
+			
+			sd[x][y] /= numRuns;
+			sd[x][y] = sqrt(sd[x][y]);
+		}
+
+	}
+
+	if (stat == 0){
+		avgfile.open("cellChargeCountAvg.txt");
+		sdfile.open("cellChargeCountSD.txt");
+	}
+	else if (stat == 1){
+		avgfile.open("cellChargeTimeAvg.txt");
+		sdfile.open("cellChargeTimeSD.txt");
+	}
+	else if (stat == 2){
+		avgfile.open("cellCongestionAvg.txt");	
+		sdfile.open("cellCongestionSD.txt");
+	}
+
+	for (int x=0; x< xMax; x++) {
+
+		for (int y=0; y<yMax; y++) {
+
+			avgfile << average[x][y] << " ";
+			sdfile << sd[x][y] << " ";
+		}
+		avgfile << endl;
+		sdfile << endl;
+	}
+
+	for (int x=0; x<numZonesL; x++) {
+		for (int y=0; y<numZonesL; y++) {
+
+			cout << zoneAverage[x][y] / numRuns << " ";
+
+		}
+		cout << endl;
+
+	}
+
+	avgfile.close();
+	sdfile.close();
 
 }
-void writeCellChargeTime();
-void writeCellCongestion();
 
 
 // writes car matrix to output file
