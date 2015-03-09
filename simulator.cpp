@@ -53,10 +53,10 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define VARY 7
 #define REASSIGN 0
 
-#define SIZE SMALL // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
+#define SIZE LARGE // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
 #define ALGORITHM SCRAM // Matching is done with either the original greedy approach or SCRAM
 #define SPEED CONSTANT
-#define SIMULATOR SAEV // Sets car ranges and fuel times for either electric or gas vehicles
+#define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
 #define WAIT MERGE // Refers to giving all unmatched trip equal priority or separate
 
 /****
@@ -413,13 +413,13 @@ float time_diff, seconds;
 	t2 = clock();
 	time_diff = ((float)t2 - (float)t1);
 	seconds = time_diff / CLOCKS_PER_SEC;
-//        reportMatchingResults();
-	reportResults ( timeTripCounts, CarMx,  maxCarUse, maxCarOcc, totDist, unoccDist, waitT, unservedT, waitCount, hotStarts, coldStarts,
+        reportMatchingResults();
+/*	reportResults ( timeTripCounts, CarMx,  maxCarUse, maxCarOcc, totDist, unoccDist, waitT, unservedT, waitCount, hotStarts, coldStarts,
                        totDistRun, totUnoccDistRun, totCarsRun, totTripsRun, totHSRun, totCSRun, totWaitTRun, totUnservedTRun, totWaitCountRun,
                        totUnusedRun, totUnoccRun, totAvgWait, totAvgTripDist, totDistRunCOV, totUnoccDistRunCOV, totCarsRunCOV, totTripsRunCOV,
                        totHSRunCOV, totCSRunCOV, totWaitTRunCOV, totUnservedTRunCOV, totWaitCountRunCOV, totUnusedRunCOV, totUnoccRunCOV,
                        totAvgWaitCOV, totAvgTripDistCOV, totStartsPerTripCOV, totAvgTripsPerCarCOV, totWaitCOV, totTripDistCOV, totCarTripsCOV,
-                       totPctMaxWaitFiveCOV, totPctInducedTCOV, totPctMaxInUseCOV, totPctMaxOccCOV, totPctColdShareCOV, numRuns, i);
+                       totPctMaxWaitFiveCOV, totPctInducedTCOV, totPctMaxInUseCOV, totPctMaxOccCOV, totPctColdShareCOV, numRuns, i); */
 	cout << "Completion time: " <<seconds << endl;
 //        if (numRuns > 1)
   //      {
@@ -437,12 +437,12 @@ float time_diff, seconds;
                            totPctMaxWaitFiveCOV, totPctInducedTCOV, totPctMaxInUseCOV, totPctMaxOccCOV, totPctColdShareCOV, numRuns);
     }
 
-    cout << "Cell Charge Counts "<<endl;
-    writeChargeStats(0);
-    cout << "Cell Charge Time " <<endl;
-    writeChargeStats(1);
-    cout << "Cell Congestion Counts" <<endl;
-    writeChargeStats(2);
+//    cout << "Cell Charge Counts "<<endl;
+//    writeChargeStats(0);
+//    cout << "Cell Charge Time " <<endl;
+//    writeChargeStats(1);
+//    cout << "Cell Congestion Counts" <<endl;
+//    writeChargeStats(2);
 
     return 0;
 }
@@ -7784,8 +7784,8 @@ void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool repo
         }
 	//if (time == 71 && tripList.size() == 77)
 	//	cout << "right call"<<endl;
-      cout << "Time of day: "<<time<<endl;
-      cout << "num cars: " << cars.size() <<" "<<tripList.size()<< endl;
+//      cout << "Time of day: "<<time<<endl;
+  //    cout << "num cars: " << cars.size() <<" "<<tripList.size()<< endl;
         if (cars.size() == 0){
         //	if (time == 71 || time == 72)
 	//		cout << "None matched cars: "<< time <<endl; 

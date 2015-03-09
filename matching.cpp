@@ -191,9 +191,9 @@ std::vector<Edge> Matching::findMatching()
 	t2 = clock();
 	float diff = ((float)t2) - ((float)t1);
 	float seconds = diff / CLOCKS_PER_SEC;
-	std::cout<<"Pre Process time: "<<seconds<<std::endl;
-	std::cout<<"num cars: "<<nCars<<std::endl;
-	std::cout <<"num trips: "<<nTrips<<std::endl;
+	//std::cout<<"Pre Process time: "<<seconds<<std::endl;
+	//std::cout<<"num cars: "<<nCars<<std::endl;
+	//std::cout <<"num trips: "<<nTrips<<std::endl;
 	N = t.starts.size();
 //	std::cout <<"N = "<<N<<std::endl;
 	return mmd_msd2(t);
@@ -572,7 +572,7 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
   float time_diff = ((float)c2 - (float)c1);
   float seconds = time_diff / CLOCKS_PER_SEC;
 
-  std::cout<<"algorithm ran: "<< seconds <<std::endl;
+//  std::cout<<"algorithm ran: "<< seconds <<std::endl;
 
   // Convert back
   if (nTrips < nCars){
