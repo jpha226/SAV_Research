@@ -54,10 +54,10 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define REASSIGN 0
 
 #define SIZE LARGE // 40 x 40 or 400 x 400 (Changes how trip generation rates are handled)
-#define ALGORITHM SCRAM // Matching is done with either the original greedy approach or SCRAM
+#define ALGORITHM GREEDY // Matching is done with either the original greedy approach or SCRAM
 #define SPEED CONSTANT
-#define SIMULATOR SAV // Sets car ranges and fuel times for either electric or gas vehicles
-#define WAIT MERGE // Refers to giving all unmatched trip equal priority or separate
+#define SIMULATOR SAEV // Sets car ranges and fuel times for either electric or gas vehicles
+#define WAIT SEPARATE // Refers to giving all unmatched trip equal priority or separate
 
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV and WAIT as SEPARATE.
@@ -66,6 +66,8 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 ****/
 
 using namespace std;
+
+struct Station;
 
 struct Trip
 {
@@ -102,6 +104,8 @@ struct Car
     int refuel;
     int numRejects;
     Trip* currTrip;
+
+    bool stationLink;
 };
 
 struct Station
@@ -137,8 +141,8 @@ const int tripDistSize = 60;
 
 const int zoneSizeL = xMax / numZonesL; // 8
 const int zoneSizeS = xMax / numZonesS; // 4
-const int maxNumRuns = 1005;
-const int numWarmRuns = 20; // 20
+const int maxNumRuns = 105;
+const int numWarmRuns = 30; // 20
 
 #if SIMULATOR == SAV
 const int carRange = 1600; //1600;//320;
@@ -156,12 +160,14 @@ vector<int> random_seeds;
 
  long totDistRun, totUnoccDistRun, totCarsRun, totTripsRun, totHSRun, totCSRun, totWaitTRun, totUnservedTRun, totUnusedRun, totUnoccRun, maxAvailCars;
     long totWaitCountRun[6];
+    long totUnoccChargeDistRun, totChargeTimeRun, totNumChargeRun;
 
-    std::vector<Car> CarMx[xMax][yMax];
-    std::vector<Trip> TTMx[288];
-    vector<int> cellChargeCount [xMax][yMax];
-    vector<int> cellChargeTime [xMax][yMax];
-    vector<int> chargeCongestionCount [xMax][yMax];
+    vector<Car> CarMx[xMax][yMax];
+    vector<Trip> TTMx[288];
+    vector <Station> ChStMx[xMax][yMax];
+//    vector<int> cellChargeCount [xMax][yMax];
+//    vector<int> cellChargeTime [xMax][yMax];
+//    vector<int> chargeCongestionCount [xMax][yMax];
     int timeTripCounts [288]; // array noting number of trips in each time bin
     double startTimes [288];
     double tripDist [tripDistSize];
@@ -171,9 +177,12 @@ vector<int> random_seeds;
 					// Two functions this is done for reallocVehsZonesL which could be changed only S zones
 					// Other is setZoneShares. This could be divided into two functions easily
 // arrays for calculating COVs
-    double totDistRunCOV [maxNumRuns]; // This does not seem to be accessed 
-    double totUnoccDistRunCOV [maxNumRuns]; // This does not seem to be accessed
-    double totCarsRunCOV [maxNumRuns]; // This does not seem to be accessed
+    double totDistRunCOV [maxNumRuns]; 
+    double totUnoccDistRunCOV [maxNumRuns]; 
+    double totUnoccChargeDistRunCOV[maxNumRuns];
+    double totChargeTimeRunCOV[maxNumRuns];
+    double totNumChargeRunCOV[maxNumRuns];
+    double totCarsRunCOV [maxNumRuns]; 
     double totTripsRunCOV [maxNumRuns];
     double totHSRunCOV [maxNumRuns];
     double totCSRunCOV [maxNumRuns];
@@ -194,8 +203,9 @@ vector<int> random_seeds;
     double totPctColdShareCOV [maxNumRuns];
 
     bool error, reportProcs, readFile, wStart;
-    int maxTrav, maxTravC, totDist, unoccDist, waitT, saveRate, startIter, unservedT, coldStarts, hotStarts, numRuns, nCars, randomSeed;
+    int maxTrav, maxTravC, totDist, unoccDist, waitT, saveRate, startIter, unservedT, coldStarts, hotStarts, numRuns, nCars, randomSeed, unoccChargeDist;
     int tripsReassigned, totTripsReassigned;
+    int nStations;
     double maxCarUse [288];
     double maxCarOcc [288];
     int waitCount[6];
@@ -319,7 +329,11 @@ void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool rep
 void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts);
 void assignCar (Car* c, Trip* trp);
 
-
+void findNearestStation (Car* car, int dist, int maxDist);
+Station* genNewStation(Car car);
+bool lookForStation (int x, int y);
+void assignStation (int x, int y, Car* car);
+void writeStationLocation();
 
 // Begin Program **************************************************************************************************
 
@@ -361,6 +375,16 @@ float time_diff, seconds;
 		time_diff = ((float)t2 - (float)t1);
 		seconds = time_diff / CLOCKS_PER_SEC;
             cout << "Warm Run " << i << " completed. Time: " << seconds << endl;
+	    nCars = 0; nStations = 0;
+	    for(int x=0; x<xMax; x++){
+		for(int y=0; y<yMax; y++){
+			nCars += CarMx[x][y].size();
+			nStations += ChStMx[x][y].size();
+			if(ChStMx[x][y].size() > 1)
+				cout << "problem w/ num charge stations"<<endl;
+		}
+	    }
+	cout << "nCars is "<<nCars <<"\nnStations is "<<nStations<<endl;
         }
     }
 
@@ -368,7 +392,7 @@ float time_diff, seconds;
     distWt = netDistWt / numWarmRuns;
     maxAvailCars = maxAvailCars / numWarmRuns;
     nCars = 0;
-
+   
     for (int i = 2; i < 100 && nCars < maxAvailCars; i++)
     {
         initVars (i,true);
@@ -382,18 +406,20 @@ float time_diff, seconds;
         placeInitCars (CarMx,   timeTripCounts, maxCarUse, maxCarOcc, totDist, unoccDist, waitT, dwLookup, reportProcs, hotStarts, coldStarts);
 
         nCars = 0;
+	nStations = 0;
         for (int x = 0; x < xMax; x++)
         {
             for (int y = 0; y < yMax; y++)
             {
                 nCars = nCars + CarMx[x][y].size();
+		nStations = nStations + ChStMx[x][y].size();
             }
         }
 
     }
 
     cout << "nCars is " << nCars << endl;
-
+    cout<< "nStations is "<<nStations << endl;
     strcpy(zName, "Zones.txt");
 
     // run the program
@@ -413,13 +439,13 @@ float time_diff, seconds;
 	t2 = clock();
 	time_diff = ((float)t2 - (float)t1);
 	seconds = time_diff / CLOCKS_PER_SEC;
-        reportMatchingResults();
-/*	reportResults ( timeTripCounts, CarMx,  maxCarUse, maxCarOcc, totDist, unoccDist, waitT, unservedT, waitCount, hotStarts, coldStarts,
+//        reportMatchingResults();
+	reportResults ( timeTripCounts, CarMx,  maxCarUse, maxCarOcc, totDist, unoccDist, waitT, unservedT, waitCount, hotStarts, coldStarts,
                        totDistRun, totUnoccDistRun, totCarsRun, totTripsRun, totHSRun, totCSRun, totWaitTRun, totUnservedTRun, totWaitCountRun,
                        totUnusedRun, totUnoccRun, totAvgWait, totAvgTripDist, totDistRunCOV, totUnoccDistRunCOV, totCarsRunCOV, totTripsRunCOV,
                        totHSRunCOV, totCSRunCOV, totWaitTRunCOV, totUnservedTRunCOV, totWaitCountRunCOV, totUnusedRunCOV, totUnoccRunCOV,
                        totAvgWaitCOV, totAvgTripDistCOV, totStartsPerTripCOV, totAvgTripsPerCarCOV, totWaitCOV, totTripDistCOV, totCarTripsCOV,
-                       totPctMaxWaitFiveCOV, totPctInducedTCOV, totPctMaxInUseCOV, totPctMaxOccCOV, totPctColdShareCOV, numRuns, i); */
+                       totPctMaxWaitFiveCOV, totPctInducedTCOV, totPctMaxInUseCOV, totPctMaxOccCOV, totPctColdShareCOV, numRuns, i); 
 	cout << "Completion time: " <<seconds << endl;
 //        if (numRuns > 1)
   //      {
@@ -443,7 +469,7 @@ float time_diff, seconds;
 //    writeChargeStats(1);
 //    cout << "Cell Congestion Counts" <<endl;
 //    writeChargeStats(2);
-
+	writeStationLocation();
     return 0;
 }
 
@@ -491,6 +517,9 @@ void initVars (int runNum, bool warmStart)
 	totTripsReassigned = 0;
         totDistRun = 0;
         totUnoccDistRun = 0;
+	totUnoccChargeDistRun = 0;
+	totNumChargeRun = 0;
+	totChargeTimeRun = 0;
         totCarsRun = 0;
         totTripsRun = 0;
         totHSRun = 0;
@@ -517,6 +546,9 @@ void initVars (int runNum, bool warmStart)
         {
             totDistRunCOV[i] = 0;
             totUnoccDistRunCOV[i] = 0;
+	    totUnoccChargeDistRunCOV[i] = 0;
+	    totChargeTimeRunCOV[i] = 0;
+	    totNumChargeRunCOV[i] = 0;
             totCarsRunCOV[i] = 0;
             totTripsRunCOV[i] = 0;
             totHSRunCOV[i] = 0;
@@ -605,7 +637,7 @@ void initVars (int runNum, bool warmStart)
 		}
 	}
 
-	if (!warmStart)
+/*	if (!warmStart)
 	{
 		for(int x=0; x<xMax; x++)
 			for(int y=0; y<yMax; y++){
@@ -624,7 +656,7 @@ void initVars (int runNum, bool warmStart)
 				chargeCongestionCount[x][y].push_back(0);
 			}
 		}
-	}
+	}*/
     }
 
     if (!warmStart)
@@ -661,7 +693,7 @@ void initVars (int runNum, bool warmStart)
                 for (int y = 0; y < yMax; y++)
                 {
                     CarMx[x][y].clear();
-					
+		    ChStMx[x][y].clear();					
                 }
             }
         }
@@ -677,6 +709,17 @@ void initVars (int runNum, bool warmStart)
 	setDwTimes (dwLookup);
 
     }
+
+    for(int x=0; x<xMax; x++){
+	for(int y=0; y<yMax; y++){
+		if(ChStMx[x][y].size() > 0){
+			ChStMx[x][y][0].chargeTime = 0;
+			ChStMx[x][y][0].unoccupiedDist = 0;
+			ChStMx[x][y][0].numCharges = 0;
+		}	
+	}
+    }
+
     return;
 }
 
@@ -1136,7 +1179,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 			}
 		}
 
-	} else {	
+	} else { // IF WE ARE NOT MERGING WAITLIST	
 //		cout << "matching wait lists"<<endl;
         	for (int w = 5; w>= 0; w--)
         	{
@@ -1285,6 +1328,31 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 //            reportProcs = false;
 //        }
 
+	// Assign cars that need to refuel to a charging station
+	for (int x =0; x<xMax; x++)
+	{
+		for (int y=0; y<yMax; y++)
+		{
+			for (int c =0; c<CarMx[x][y].size(); c++)
+			{
+				if(CarMx[x][y][c].refuel > 0){
+					if (SPEED == VARY)
+						trav = getCarTrav(x,y,t);
+					for (int d=0; d<trav && CarMx[x][y][c].stationLink == false; d++)
+						findNearestStation(&CarMx[x][y][c],d,trav); // This function needs to assign station to car
+					if (warmStart && CarMx[x][y][c].stationLink == false){
+
+						genNewStation(CarMx[x][y][c]);
+						CarMx[x][y][c].destX = x;
+						CarMx[x][y][c].destY = y;
+						CarMx[x][y][c].stationLink = true;
+					}
+				}
+			}
+		}
+	}
+
+
 // move all cars that are in use
         for (int x = 0; x < xMax; x++)
         {
@@ -1313,7 +1381,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
             {
                 for (int c = 0; c < CarMx[x][y].size(); c++)
                 {
-                    if (CarMx[x][y][c].moved == false)
+                    if (CarMx[x][y][c].moved == false && CarMx[x][y][c].refuel == 0)
                     {
                         tempCarOcc++;
                     }
@@ -1322,6 +1390,8 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
         }
 
         maxCarOcc[t] = maxCarOcc[t] + tempCarOcc;
+
+		
 
 //        if (tempCarOcc < maxCarOcc)
 //        {
@@ -1394,22 +1464,23 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 		int cellCt = 0;
                 for (int c = 0; c < CarMx[x][y].size(); c++)
                 {
-                    if (CarMx[x][y][c].refuel > 0)
+                    if (CarMx[x][y][c].refuel > 0 && ChStMx[x][y].size() > 0) // need to refuel and at a station
                     {
 			cellCt++;
+			ChStMx[x][y][0].chargeTime++;
                         CarMx[x][y][c].refuel--;
                         CarMx[x][y][c].gas = carRange;
-			cellChargeTime[x][y][iter] ++;
+			//cellChargeTime[x][y][iter] ++;
                         if (CarMx[x][y][c].refuel == 0)
                         {
                             CarMx[x][y][c].inUse = false;
 			    CarMx[x][y][c].numRejects = 0;
-//			    CarMx[x][y][c].currTrip = NULL;
+			    CarMx[x][y][c].stationLink = false;
                         }
                     }
                 }
-		if (cellCt > 1)
-			chargeCongestionCount[x][y][iter] ++;
+//		if (cellCt > 1)
+//			chargeCongestionCount[x][y][iter] ++;
             }
         }
 
@@ -1499,7 +1570,9 @@ void placeInitCars (std::vector<Car> CarMx[][yMax],   int* timeTripCounts, doubl
                 CarMx[x][y][c].returnHome = false;
                 CarMx[x][y][c].tripCt = 0;
 		CarMx[x][y][c].numRejects = 0;
-//		CarMx[x][y][c].currTrip = NULL;
+
+		CarMx[x][y][c].stationLink = false;
+		
 //		if (RUN == RESET)
 //		{
 //			CarMx[x][y][c].gas = carRange;
@@ -1542,6 +1615,7 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
 {
     int nCars = 0;
     int nTrips = 0;
+    int nStations = 0;
     int maxTripGen = 0;
     char dummyStr[20];
 
@@ -1572,6 +1646,7 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
         for (int y = 0; y < yMax; y++)
         {
             nCars = nCars + CarMx[x][y].size();
+	    nStations = nStations + ChStMx[x][y].size();
         }
     }
 
@@ -1651,6 +1726,21 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
         }
     }
 
+    // Get Charge Stats
+    double chargeDist=0.0;
+    int chargeTime=0.0;
+    int chargeCount=0.0;
+    for (int x=0; x<xMax; x++){
+	for(int y=0; y<yMax; y++){
+		if(ChStMx[x][y].size() > 0){
+			chargeDist += ChStMx[x][y][0].unoccupiedDist;
+			chargeTime += ChStMx[x][y][0].chargeTime;
+			chargeCount += ChStMx[x][y][0].numCharges;
+		}
+	}
+     }
+
+
     avgWait = avgWait / nTrips;
     avgDist = avgDist / nTrips;
     avgTrips = avgTrips / nCars;
@@ -1698,11 +1788,15 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
     cout << "Total number of trips " << nTrips << endl;
     cout << "Total number of unserved trips " << unservedT << endl;
     cout << "Total number of cars " << nCars << endl;
+    cout << "Total number of stations "<< nStations << endl;
 //    cout << "5-minute traveler wait time intervals elapsed " << waitCount << endl;
-    cout << "Total number of trips reassigned "<< tripsReassigned << endl;
+//    cout << "Total number of trips reassigned "<< tripsReassigned << endl;
     cout << "Average wait time " << avgWait << endl;
     cout << "Total miles traveled " << totDist / 4 << endl;
     cout << "Total unoccupied miles traveled " << unoccDist / 4 << endl;
+    cout << "Total unoccupied miles to charge " << chargeDist / 4 << endl;
+    cout << "Total Charges "<< chargeCount << endl;
+    cout << "Total Charge Time " << chargeTime << endl;
     cout << "Average trip miles " << avgDist << endl;
 //    cout << "Maximum number of trips starting during any 5 minute period " << maxTripGen << endl;
     cout << "Maximum number of cars in use during any 5 minute period " << maxCarUseT << endl;
@@ -1735,6 +1829,9 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
     totCSRun = totCSRun + coldStarts;
     totDistRun = totDistRun + totDist;
     totUnoccDistRun = totUnoccDistRun + unoccDist;
+    totUnoccChargeDistRun = totUnoccChargeDistRun + chargeDist;
+    totChargeTimeRun += chargeTime;
+    totNumChargeRun += chargeCount;
     totUnusedRun = totUnusedRun + maxCarUseT;
     totUnoccRun = totUnoccRun + maxCarOccT;
     totAvgWait = totAvgWait + avgWait;
@@ -1750,6 +1847,9 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
 
     totDistRunCOV[runNum-1] = totDist;
     totUnoccDistRunCOV[runNum-1] = unoccDist;
+    totUnoccChargeDistRunCOV[runNum-1] = unoccChargeDist;
+    totChargeTimeRunCOV[runNum-1] = chargeTime;
+    totNumChargeRunCOV[runNum-1] = chargeCount;
     totCarsRunCOV[runNum-1] = nCars;
     totTripsRunCOV[runNum-1] = nTrips;
     totHSRunCOV[runNum-1] = hotStarts;
@@ -1782,13 +1882,16 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
                          double* totPctMaxInUseCOV, double* totPctMaxOccCOV, double* totPctColdShareCOV, int numRuns)
 {
     char dummyStr[20];
-    double totDistRunCOVF, totUnoccDistRunCOVF,totCarsRunCOVF, totTripsRunCOVF, totHSRunCOVF, totCSRunCOVF, totWaitTRunCOVF, totUnservedTRunCOVF,
+    double totDistRunCOVF, totUnoccDistRunCOVF, totUnoccChargeDistRunCOVF,totCarsRunCOVF, totTripsRunCOVF, totHSRunCOVF, totCSRunCOVF, totWaitTRunCOVF, totUnservedTRunCOVF, totChargeTimeRunCOVF, totNumChargeRunCOVF,
            totWaitCountRunCOVF, totUnusedRunCOVF, totUnoccRunCOVF, totAvgWaitCOVF, totAvgTripDistCOVF, totStartsPerTripCOVF, totAvgTripsPerCarCOVF,
            totPctMaxWaitFiveCOVF, totPctInducedTCOVF, totPctMaxInUseCOVF, totPctMaxOccCOVF, totPctColdShareCOVF;
 
 
     findCOV (totDistRunCOVF, totDistRunCOV, numRuns);
     findCOV (totUnoccDistRunCOVF, totUnoccDistRunCOV, numRuns);
+    findCOV(totUnoccChargeDistRunCOVF, totUnoccDistRunCOV, numRuns);
+    findCOV(totChargeTimeRunCOVF, totChargeTimeRunCOV, numRuns);
+    findCOV(totNumChargeRunCOVF, totNumChargeRunCOV, numRuns);
     findCOV (totCarsRunCOVF, totCarsRunCOV, numRuns);
     findCOV (totTripsRunCOVF, totTripsRunCOV, numRuns);
     findCOV (totHSRunCOVF, totHSRunCOV, numRuns);
@@ -1819,6 +1922,9 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
     totCSRun = totCSRun / numRuns;
     totDistRun = totDistRun / numRuns;
     totUnoccDistRun = totUnoccDistRun / numRuns;
+    totUnoccChargeDistRun = totUnoccChargeDistRun / numRuns;
+    totNumChargeRun = totNumChargeRun / numRuns;
+    totChargeTimeRun = totChargeTimeRun / numRuns;
     totUnoccRun = totUnoccRun / numRuns;
     totUnusedRun = totUnusedRun / numRuns;
     totAvgWait = totAvgWait / numRuns;
@@ -1841,6 +1947,9 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
     cout << "Average number of reassigned trips: " << totTripsReassigned / (1.0 * numRuns)<< endl;
     cout << "Average total miles traveled " << totDistRun / 4 << "     COV: " << totDistRunCOVF << "\tsd: "<<(totDistRun / 4.0)* totDistRunCOVF<< endl;
     cout << "Average total unocc mi traveled  " << totUnoccDistRun / 4 << "  COV: " << totUnoccDistRunCOVF << "\tsd: "<<(totUnoccDistRun / 4.0) * totUnoccDistRunCOVF<< endl;
+    cout << "Average miles to charge " << totUnoccChargeDistRun / 4 << "   COV: " << totUnoccChargeDistRunCOVF << endl;
+    cout << "Average charge time " << totChargeTimeRun << "   COV: " << totChargeTimeRunCOVF << endl;
+    cout << "Average number of charges " << totNumChargeRun << "   COV: " << totNumChargeRunCOVF << endl;
     cout << "Average trip distance " << totAvgTripDist << "           COV: " << totAvgTripDistCOVF << "\tsd: "<<totAvgTripDist * totAvgTripDistCOVF << endl;
     cout << "Average min number unused cars " << totUnusedRun << "       COV: " << totUnusedRunCOVF << endl;
     cout << "Average min number unoccupied cars " << totUnoccRun << "  COV: " << totUnoccRunCOVF << endl;
@@ -4843,7 +4952,7 @@ bool lookForCar (int x, int y, int r, int dist, int& cn, std::vector<Car> CarMx[
 				CarMx[x][y][c].numRejects++;
 				if (CarMx[x][y][c].numRejects >= rejectLimit){
 					CarMx[x][y][c].refuel = refuelTime;
-					cellChargeCount[x][y][r] ++;
+					//cellChargeCount[x][y][r] ++;
 					CarMx[x][y][c].inUse = true;
 				}
 			}
@@ -4931,6 +5040,7 @@ Car genNewCar (Trip trp)
     nCar.tripCt = 0;
     nCar.numRejects = 0;
 
+    nCar.stationLink = false;
     randGas = rand();
     randGas = randGas / RAND_MAX;
 
@@ -4947,6 +5057,14 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
     
     // identify target car in the car matrix
     Car tCar = CarMx[x][y][c];
+    bool needFuel = false;
+    if(tCar.refuel > 0){
+	needFuel = true;
+	tCar.pickupX = -1;
+	tCar.pickupY = -1;
+
+    }
+
     int trav = maxTrav;
     double wait; 
     if (tCar.pickupX != -1 || tCar.pickupY != -1)
@@ -5022,6 +5140,7 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
 
 	// If car is not refueling and at pick up location
 	if (tCar.refuel == 0 && tCar.x == tCar.currTrip->startX && tCar.y == tCar.currTrip->startY){
+
 		double waitTrav = abs(tCar.currTrip->startX - x) + abs(tCar.currTrip->startY - y);
 		wait = 5 * (t - tCar.currTrip->startTime);
 		wait +=  (5 * waitTrav / maxTrav);
@@ -5055,15 +5174,18 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
         if (trav >= abs(tCar.destX - tCar.x))
         {
             trav = trav - abs(tCar.destX - tCar.x);
-            totDist = totDist + abs(tCar.destX - tCar.x);
+	    if(!needFuel)
+	            totDist = totDist + abs(tCar.destX - tCar.x);
             tCar.x = tCar.destX;
         } else if (tCar.destX > tCar.x) {
             tCar.x = tCar.x + trav;
-            totDist = totDist + trav;
+	    if(!needFuel)
+	            totDist = totDist + trav;
             trav = 0;
         } else {
             tCar.x = tCar.x - trav;
-            totDist = totDist + trav;
+	    if(!needFuel)
+	            totDist = totDist + trav;
             trav = 0;
         }
     }
@@ -5073,7 +5195,8 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
     {
         if (trav >= abs(tCar.destY - tCar.y))
         {
-            totDist = totDist + abs(tCar.destY - tCar.y);
+	
+	    totDist = totDist + abs(tCar.destY - tCar.y);
             tCar.y = tCar.destY;
         } else if (tCar.destY > tCar.y) {
             tCar.y = tCar.y + trav;
@@ -7069,6 +7192,10 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
 
     // identify target car in the car matrix the car will now have picked up passengers and will have moved by the end of this function
     Car tCar = CarMx[ox][oy][c];
+
+    bool needFuel = false;
+    if(tCar.refuel > 0)
+	needFuel = true;
     tCar.x = dx;
     tCar.y = dy;
 //    tCar.pickupX = -1;
@@ -7102,15 +7229,16 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
     CarMx[ox][oy].pop_back();
     
 
-    if (dx == tCar.destX && dy == tCar.destY && tCar.pickupX == -1 && tCar.pickupY == -1)
+    if (dx == tCar.destX && dy == tCar.destY && tCar.pickupX == -1 && tCar.pickupY == -1 && !needFuel)
     {
         // we have arrived at the target location, free the car
         if (reportProcs)
         {
             cout << "Arrived! Releasing car." << endl;
         }
+	
         tCar.inUse = false;
-
+	
         // generate a return trip, if slated
         if (tCar.returnHome == true)
         {
@@ -7123,7 +7251,7 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
         {
             tCar.refuel = refuelTime; // Changed to 48 from 2 (wait time is now 4 hours instead of 10 minutes)
             tCar.inUse = true;
-	    cellChargeCount[tCar.x][tCar.y][iter]++;
+	    //cellChargeCount[tCar.x][tCar.y][iter]++;
         }
     }
 
@@ -7356,16 +7484,16 @@ void writeChargeStats(int stat){
 			for (int n=0; n < numRuns; n++){
 
 				if (stat == 0){
-					average[x][y] += cellChargeCount[x][y][n];
-					zoneAverage[x / zoneSizeL][y / zoneSizeL] += cellChargeCount[x][y][n];
+				//	average[x][y] += cellChargeCount[x][y][n];
+				//	zoneAverage[x / zoneSizeL][y / zoneSizeL] += cellChargeCount[x][y][n];
 				}
 				if (stat == 1){
-					average[x][y] += cellChargeTime[x][y][n];
-					zoneAverage[x / zoneSizeL][y / zoneSizeL] += cellChargeTime[x][y][n];
+				//	average[x][y] += cellChargeTime[x][y][n];
+				//	zoneAverage[x / zoneSizeL][y / zoneSizeL] += cellChargeTime[x][y][n];
 				}
 				if (stat == 2){
-					average[x][y] += chargeCongestionCount[x][y][n];
-					zoneAverage[x / zoneSizeL][y / zoneSizeL] += chargeCongestionCount[x][y][n];
+				//	average[x][y] += chargeCongestionCount[x][y][n];
+				//	zoneAverage[x / zoneSizeL][y / zoneSizeL] += chargeCongestionCount[x][y][n];
 				}
 			}
 
@@ -7382,13 +7510,13 @@ void writeChargeStats(int stat){
 
 			for (int n=0; n<numRuns; n++){
 
-				if (stat == 0)
+/*				if (stat == 0)
 					sd[x][y] += pow(cellChargeCount[x][y][n] - average[x][y],2);
 				if (stat == 1)
 					sd[x][y] += pow(cellChargeTime[x][y][n] - average[x][y],2);
 				if (stat == 2)
 					sd[x][y] += pow(chargeCongestionCount[x][y][n] - average[x][y],2);
-			}
+*/			}
 			
 			sd[x][y] /= numRuns;
 			sd[x][y] = sqrt(sd[x][y]);
@@ -7955,4 +8083,274 @@ void reportMatchingResults()
 	for (int i=0; i < 6; i++){
 		cout << "Wait " << 5*(i+1) << " " << waitCount[i] << endl;
 	}
+}
+
+// generates a new charging station at the location of car that needs it
+Station* genNewStation (Car car)
+{
+
+    if(ChStMx[car.x][car.y].size() > 0)
+	return &ChStMx[car.x][car.y][0];
+    Station nStat;
+
+    nStat.x = car.x;
+    nStat.y = car.y;
+    nStat.startX = car.x;
+    nStat.startY = car.y;
+    nStat.numCharges = 0;
+    nStat.chargeTime = 0;
+    ChStMx[car.x][car.y].push_back(nStat);
+    
+    return &ChStMx[car.x][car.y][0];
+}
+
+//Finds the nearest available car to a given trip
+void findNearestStation (Car* car, int dist, int maxDist)
+{
+    int x,y;
+    int carX = x = car->x;
+    int carY = y = car->y;
+    bool found = false;
+    int d,r;
+ 
+    if (dist == 0)
+    {
+        found = lookForStation (x, y);
+        if (found)
+        {
+            assignStation(x, y, car);
+        }
+    } else {
+
+        r = rand();
+        r = r / RAND_MAX;
+
+        if (r < 0.25) // start with the northwest quadrant
+        {
+            for (d = 0; d < dist && !found; d++)  //northwest quadrant
+            {
+                x = max(0, carX - dist + d);
+                y = min(yMax - 1, carY + d);
+                found = lookForStation (x,y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+            for (d = 0; d < dist && !found; d++)  //northeast quadrant
+            {
+                x = min(xMax - 1, carX + d);
+                y = min(yMax - 1, carY + dist - d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+            for (d = 0; d < dist && !found; d++)  //southeast quadrant
+            {
+                x = min(xMax - 1, carX + dist - d);
+                y = max(0, carY - d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+            for (d = 0; d < dist && !found; d++)  //southwest quadrant
+            {
+                x = max(0, carX - d);
+                y = max(0, carY - dist + d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+
+        } else if (r < 0.5) {// start with the northeast quadrant
+
+            for (d = 0; d < dist && !found; d++)  //northeast quadrant
+            {
+                x = min(xMax - 1, carX + d);
+                y = min(yMax - 1, carY + dist - d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+            for (d = 0; d < dist && !found; d++)  //southeast quadrant
+            {
+                x = min(xMax - 1, carX + dist - d);
+                y = max(0, carY - d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+            for (d = 0; d < dist && !found; d++)  //southwest quadrant
+            {
+                x = max(0, carX - d);
+                y = max(0, carY - dist + d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+            for (d = 0; d < dist && !found; d++)  //northwest quadrant
+            {
+                x = max(0, carX - dist + d);
+                y = min(yMax - 1, carY + d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+
+        } else if (r < 0.75) { // start with the southeast quadrant
+
+            for (d = 0; d < dist && !found; d++)  //southeast quadrant
+            {
+                x = min(xMax - 1, carX + dist - d);
+                y = max(0, carY - d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+            for (d = 0; d < dist && !found; d++)  //southwest quadrant
+            {
+                x = max(0, carX - d);
+                y = max(0, carY - dist + d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+            for (d = 0; d < dist && !found; d++)  //northwest quadrant
+            {
+                x = max(0, carX - dist + d);
+                y = min(yMax - 1, carY + d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+            for (d = 0; d < dist && !found; d++)  //northeast quadrant
+            {
+                x = min(xMax - 1, carX + d);
+                y = min(yMax - 1, carY + dist - d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+
+        } else { // start with the southwest quadrant
+
+            for (d = 0; d < dist && !found; d++)  //southwest quadrant
+            {
+                x = max(0, carX - d);
+                y = max(0, carY - dist + d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+            for (d = 0; d < dist && !found; d++)  //northwest quadrant
+            {
+                x = max(0, carX - dist + d);
+                y = min(yMax - 1, carY + d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+            for (d = 0; d < dist && !found; d++)  //northeast quadrant
+            {
+                x = min(xMax - 1, carX + d);
+                y = min(yMax - 1, carY + dist - d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+            for (d = 0; d < dist && !found; d++)  //southeast quadrant
+            {
+                x = min(xMax - 1, carX + dist - d);
+                y = max(0, carY - d);
+                found = lookForStation (x, y);
+                if (found)
+                {
+                    assignStation(x, y, car);
+                }
+            }
+        }
+    }
+
+//    if (found)
+//    {
+//	cout << "found station!!!!"<<endl;
+//    }
+
+
+    return;
+}
+
+void assignStation (int x, int y, Car* car)
+{
+   
+    car->inUse = true; // Already set as true when refuel is changed so probably redundant
+    car->destX = x;
+    car->destY = y;
+
+    car->pickupX = -1;
+    car->pickupY = -1;
+    car->stationLink = true;
+    ChStMx[x][y][0].unoccupiedDist += abs(car->x - x) + abs(car->y - y);
+    ChStMx[x][y][0].numCharges++;
+    return;
+}
+
+
+//Looks for a free car at coordinates x,y
+bool lookForStation (int x, int y)
+{
+   
+    bool found = false;
+
+    if (ChStMx[x][y].size() > 0)
+	return true;
+
+    return found;
+}
+
+void writeStationLocation()
+{
+	ofstream outfile;
+ 	outfile.open("stationLocation.txt");
+
+	for(int x=0; x<xMax; x++){
+		for(int y=0; y<yMax; y++){
+			if (ChStMx[x][y].size() > 0)
+				outfile << "1";
+			else
+				outfile << "0";
+			if(yMax != yMax - 1)
+				outfile << " ";
+		}
+		outfile << endl;
+	}
+	outfile.close();
 }
