@@ -117,6 +117,7 @@ struct Station
 	int numCharges;
 	int chargeTime;
 	int unoccupiedDist;
+	int congestTime;
 };
 
 const int xMax = SIZE;
@@ -152,7 +153,7 @@ const int rejectLimit = 1000000000; // Really high means it won't be used
 #else
 const int carRange = 320; // 320 = 80 miles or 1000 = 250 miles
 const int refuelTime = 48; // 48 = 4 hours or 6 = 30 minutes
-const int refuelDist = 40; // Refuels if only 40 cells = 10 miles left, set to 0 to disable
+const int refuelDist = 0; // Refuels if only 40 cells = 10 miles left, set to 0 to disable
 const int rejectLimit = 1; // Set to 1000000000 to disable
 #endif
 
@@ -160,14 +161,14 @@ vector<int> random_seeds;
 
  long totDistRun, totUnoccDistRun, totCarsRun, totTripsRun, totHSRun, totCSRun, totWaitTRun, totUnservedTRun, totUnusedRun, totUnoccRun, maxAvailCars;
     long totWaitCountRun[6];
-    long totUnoccChargeDistRun, totChargeTimeRun, totNumChargeRun;
+    long totUnoccChargeDistRun, totChargeTimeRun, totNumChargeRun, totCongestTimeRun;
 
     vector<Car> CarMx[xMax][yMax];
     vector<Trip> TTMx[288];
     vector <Station> ChStMx[xMax][yMax];
-//    vector<int> cellChargeCount [xMax][yMax];
-//    vector<int> cellChargeTime [xMax][yMax];
-//    vector<int> chargeCongestionCount [xMax][yMax];
+    vector<int> cellChargeCount [xMax][yMax];
+    vector<int> cellChargeTime [xMax][yMax];
+    vector<int> chargeCongestionCount [xMax][yMax];
     int timeTripCounts [288]; // array noting number of trips in each time bin
     double startTimes [288];
     double tripDist [tripDistSize];
@@ -181,6 +182,7 @@ vector<int> random_seeds;
     double totUnoccDistRunCOV [maxNumRuns]; 
     double totUnoccChargeDistRunCOV[maxNumRuns];
     double totChargeTimeRunCOV[maxNumRuns];
+    double totCongestTimeRunCOV[maxNumRuns];
     double totNumChargeRunCOV[maxNumRuns];
     double totCarsRunCOV [maxNumRuns]; 
     double totTripsRunCOV [maxNumRuns];
@@ -334,6 +336,7 @@ Station* genNewStation(Car car);
 bool lookForStation (int x, int y);
 void assignStation (int x, int y, Car* car);
 void writeStationLocation();
+int nearestStationDistance(int x, int y);
 
 // Begin Program **************************************************************************************************
 
@@ -345,8 +348,9 @@ int main(int argc, char* argv[])
 		randomSeed = atoi(argv[1]);
 	    
 strcpy(zName, "Warm Zones.txt");
-clock_t t1,t2;
+clock_t t1,t2,tot1,tot2;
 float time_diff, seconds;
+tot1 = clock();
     // warm start, get # of vehs
     for (int i = 1; i <= numWarmRuns; i++)
     {
@@ -463,13 +467,17 @@ float time_diff, seconds;
                            totPctMaxWaitFiveCOV, totPctInducedTCOV, totPctMaxInUseCOV, totPctMaxOccCOV, totPctColdShareCOV, numRuns);
     }
 
-//    cout << "Cell Charge Counts "<<endl;
-//    writeChargeStats(0);
-//    cout << "Cell Charge Time " <<endl;
-//    writeChargeStats(1);
-//    cout << "Cell Congestion Counts" <<endl;
-//    writeChargeStats(2);
-	writeStationLocation();
+    cout << "Cell Charge Counts "<<endl;
+    writeChargeStats(0);
+    cout << "Cell Charge Time " <<endl;
+    writeChargeStats(1);
+    cout << "Cell Congestion Counts" <<endl;
+    writeChargeStats(2); 
+    writeStationLocation();
+    tot2 = clock();
+    time_diff = ((float)tot2 - (float)tot1);
+    seconds = time_diff / CLOCKS_PER_SEC;
+    cout << "Total time: " << seconds;
     return 0;
 }
 
@@ -637,7 +645,7 @@ void initVars (int runNum, bool warmStart)
 		}
 	}
 
-/*	if (!warmStart)
+	if (!warmStart)
 	{
 		for(int x=0; x<xMax; x++)
 			for(int y=0; y<yMax; y++){
@@ -656,7 +664,7 @@ void initVars (int runNum, bool warmStart)
 				chargeCongestionCount[x][y].push_back(0);
 			}
 		}
-	}*/
+	}
     }
 
     if (!warmStart)
@@ -716,6 +724,7 @@ void initVars (int runNum, bool warmStart)
 			ChStMx[x][y][0].chargeTime = 0;
 			ChStMx[x][y][0].unoccupiedDist = 0;
 			ChStMx[x][y][0].numCharges = 0;
+			ChStMx[x][y][0].congestTime = 0;
 		}	
 	}
     }
@@ -1406,7 +1415,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 
  // cout << "reloc" << endl;
 
-        reallocVehsLZones (CarMx,   timeTripCounts, dwLookup, zoneSharesS, t, reportProcs, totDist, unoccDist, hotStarts, coldStarts, trav,
+/*        reallocVehsLZones (CarMx,   timeTripCounts, dwLookup, zoneSharesS, t, reportProcs, totDist, unoccDist, hotStarts, coldStarts, trav,
                            netZoneBalance, cardDirectLZ, waitZonesTS, numZonesS, zoneSizeS, trackX, trackY, trackC,iter);
 
         randOrdering(xRandOrd, xMax);
@@ -1436,7 +1445,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
         }
 
         tempMinUnused = 0;
-
+*/
 // reset movement for all cars
         for (int x = 0; x < xMax; x++)
         {
@@ -1470,7 +1479,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 			ChStMx[x][y][0].chargeTime++;
                         CarMx[x][y][c].refuel--;
                         CarMx[x][y][c].gas = carRange;
-			//cellChargeTime[x][y][iter] ++;
+			cellChargeTime[x][y][iter] ++;
                         if (CarMx[x][y][c].refuel == 0)
                         {
                             CarMx[x][y][c].inUse = false;
@@ -1479,8 +1488,8 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                         }
                     }
                 }
-//		if (cellCt > 1)
-//			chargeCongestionCount[x][y][iter] ++;
+		if (cellCt > 1)
+			ChStMx[x][y][0].congestTime ++;
             }
         }
 
@@ -1491,7 +1500,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 //        }
     }
 
-    //runSummary(warmStart, lastWarm, zoneGen, waitZones, netZoneBalance, tripO, tripD, cardDirectLZ, cardDirect, cardDirect2,  timeTripCounts);
+    runSummary(warmStart, lastWarm, zoneGen, waitZones, netZoneBalance, tripO, tripD, cardDirectLZ, cardDirect, cardDirect2,  timeTripCounts);
 
     if (warmStart && !lastWarm)
     {
@@ -1728,14 +1737,16 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
 
     // Get Charge Stats
     double chargeDist=0.0;
-    int chargeTime=0.0;
-    int chargeCount=0.0;
+    double chargeTime=0.0;
+    double chargeCount=0.0;
+    double congestTime=0.0;
     for (int x=0; x<xMax; x++){
 	for(int y=0; y<yMax; y++){
 		if(ChStMx[x][y].size() > 0){
 			chargeDist += ChStMx[x][y][0].unoccupiedDist;
 			chargeTime += ChStMx[x][y][0].chargeTime;
 			chargeCount += ChStMx[x][y][0].numCharges;
+			congestTime += ChStMx[x][y][0].congestTime;
 		}
 	}
      }
@@ -1797,6 +1808,7 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
     cout << "Total unoccupied miles to charge " << chargeDist / 4 << endl;
     cout << "Total Charges "<< chargeCount << endl;
     cout << "Total Charge Time " << chargeTime << endl;
+    cout << "Average Congestion Time per Station " << congestTime / nStations << endl;
     cout << "Average trip miles " << avgDist << endl;
 //    cout << "Maximum number of trips starting during any 5 minute period " << maxTripGen << endl;
     cout << "Maximum number of cars in use during any 5 minute period " << maxCarUseT << endl;
@@ -1831,6 +1843,7 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
     totUnoccDistRun = totUnoccDistRun + unoccDist;
     totUnoccChargeDistRun = totUnoccChargeDistRun + chargeDist;
     totChargeTimeRun += chargeTime;
+    totCongestTimeRun += congestTime;
     totNumChargeRun += chargeCount;
     totUnusedRun = totUnusedRun + maxCarUseT;
     totUnoccRun = totUnoccRun + maxCarOccT;
@@ -1850,6 +1863,7 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
     totUnoccChargeDistRunCOV[runNum-1] = unoccChargeDist;
     totChargeTimeRunCOV[runNum-1] = chargeTime;
     totNumChargeRunCOV[runNum-1] = chargeCount;
+    totCongestTimeRunCOV[runNum-1] = congestTime;
     totCarsRunCOV[runNum-1] = nCars;
     totTripsRunCOV[runNum-1] = nTrips;
     totHSRunCOV[runNum-1] = hotStarts;
@@ -1882,7 +1896,7 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
                          double* totPctMaxInUseCOV, double* totPctMaxOccCOV, double* totPctColdShareCOV, int numRuns)
 {
     char dummyStr[20];
-    double totDistRunCOVF, totUnoccDistRunCOVF, totUnoccChargeDistRunCOVF,totCarsRunCOVF, totTripsRunCOVF, totHSRunCOVF, totCSRunCOVF, totWaitTRunCOVF, totUnservedTRunCOVF, totChargeTimeRunCOVF, totNumChargeRunCOVF,
+    double totDistRunCOVF, totUnoccDistRunCOVF, totUnoccChargeDistRunCOVF, totCongestTimeRunCOVF, totCarsRunCOVF, totTripsRunCOVF, totHSRunCOVF, totCSRunCOVF, totWaitTRunCOVF, totUnservedTRunCOVF, totChargeTimeRunCOVF, totNumChargeRunCOVF,
            totWaitCountRunCOVF, totUnusedRunCOVF, totUnoccRunCOVF, totAvgWaitCOVF, totAvgTripDistCOVF, totStartsPerTripCOVF, totAvgTripsPerCarCOVF,
            totPctMaxWaitFiveCOVF, totPctInducedTCOVF, totPctMaxInUseCOVF, totPctMaxOccCOVF, totPctColdShareCOVF;
 
@@ -1890,6 +1904,7 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
     findCOV (totDistRunCOVF, totDistRunCOV, numRuns);
     findCOV (totUnoccDistRunCOVF, totUnoccDistRunCOV, numRuns);
     findCOV(totUnoccChargeDistRunCOVF, totUnoccDistRunCOV, numRuns);
+    findCOV(totCongestTimeRunCOVF, totCongestTimeRunCOV, numRuns);
     findCOV(totChargeTimeRunCOVF, totChargeTimeRunCOV, numRuns);
     findCOV(totNumChargeRunCOVF, totNumChargeRunCOV, numRuns);
     findCOV (totCarsRunCOVF, totCarsRunCOV, numRuns);
@@ -1923,6 +1938,7 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
     totDistRun = totDistRun / numRuns;
     totUnoccDistRun = totUnoccDistRun / numRuns;
     totUnoccChargeDistRun = totUnoccChargeDistRun / numRuns;
+    totCongestTimeRun = totCongestTimeRun / numRuns;
     totNumChargeRun = totNumChargeRun / numRuns;
     totChargeTimeRun = totChargeTimeRun / numRuns;
     totUnoccRun = totUnoccRun / numRuns;
@@ -1950,6 +1966,7 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
     cout << "Average miles to charge " << totUnoccChargeDistRun / 4 << "   COV: " << totUnoccChargeDistRunCOVF << endl;
     cout << "Average charge time " << totChargeTimeRun << "   COV: " << totChargeTimeRunCOVF << endl;
     cout << "Average number of charges " << totNumChargeRun << "   COV: " << totNumChargeRunCOVF << endl;
+    cout << "Average charge congestion times per run " << totCongestTimeRun << "   COV: " << totCongestTimeRunCOVF << endl;
     cout << "Average trip distance " << totAvgTripDist << "           COV: " << totAvgTripDistCOVF << "\tsd: "<<totAvgTripDist * totAvgTripDistCOVF << endl;
     cout << "Average min number unused cars " << totUnusedRun << "       COV: " << totUnusedRunCOVF << endl;
     cout << "Average min number unoccupied cars " << totUnoccRun << "  COV: " << totUnoccRunCOVF << endl;
@@ -4953,7 +4970,7 @@ bool lookForCar (int x, int y, int r, int dist, int& cn, std::vector<Car> CarMx[
 				CarMx[x][y][c].numRejects++;
 				if (CarMx[x][y][c].numRejects >= rejectLimit){
 					CarMx[x][y][c].refuel = refuelTime;
-					//cellChargeCount[x][y][r] ++;
+					cellChargeCount[x][y][r] ++;
 					CarMx[x][y][c].inUse = true;
 				}
 			}
@@ -7485,16 +7502,16 @@ void writeChargeStats(int stat){
 			for (int n=0; n < numRuns; n++){
 
 				if (stat == 0){
-				//	average[x][y] += cellChargeCount[x][y][n];
-				//	zoneAverage[x / zoneSizeL][y / zoneSizeL] += cellChargeCount[x][y][n];
+					average[x][y] += (ChStMx[x][y].size() > 0) ? ChStMx[x][y][0].numCharges : 0;
+					zoneAverage[x / zoneSizeL][y / zoneSizeL] += (ChStMx[x][y].size() > 0) ? ChStMx[x][y][0].numCharges : 0;
 				}
 				if (stat == 1){
-				//	average[x][y] += cellChargeTime[x][y][n];
-				//	zoneAverage[x / zoneSizeL][y / zoneSizeL] += cellChargeTime[x][y][n];
+					average[x][y] += (ChStMx[x][y].size() > 0) ? ChStMx[x][y][0].chargeTime : 0;
+					zoneAverage[x / zoneSizeL][y / zoneSizeL] += (ChStMx[x][y].size() > 0) ? ChStMx[x][y][0].chargeTime : 0;
 				}
 				if (stat == 2){
-				//	average[x][y] += chargeCongestionCount[x][y][n];
-				//	zoneAverage[x / zoneSizeL][y / zoneSizeL] += chargeCongestionCount[x][y][n];
+					average[x][y] += (ChStMx[x][y].size() > 0) ? ChStMx[x][y][0].congestTime : 0;
+					zoneAverage[x / zoneSizeL][y / zoneSizeL] += (ChStMx[x][y].size() > 0) ? ChStMx[x][y][0].congestTime : 0;
 				}
 			}
 
@@ -7503,7 +7520,7 @@ void writeChargeStats(int stat){
 		}
 
 	}
-	
+	int cellValue;
 	// Compute standard deviation
 	for (int x=0; x < xMax; x++) {
 
@@ -7511,13 +7528,19 @@ void writeChargeStats(int stat){
 
 			for (int n=0; n<numRuns; n++){
 
-/*				if (stat == 0)
-					sd[x][y] += pow(cellChargeCount[x][y][n] - average[x][y],2);
-				if (stat == 1)
-					sd[x][y] += pow(cellChargeTime[x][y][n] - average[x][y],2);
-				if (stat == 2)
-					sd[x][y] += pow(chargeCongestionCount[x][y][n] - average[x][y],2);
-*/			}
+				if (stat == 0){
+					cellValue = (ChStMx[x][y].size() > 0) ? ChStMx[x][y][0].numCharges : 0;
+					sd[x][y] += pow(cellValue - average[x][y],2);
+				}
+				if (stat == 1){
+					cellValue = (ChStMx[x][y].size() > 0) ? ChStMx[x][y][0].chargeTime : 0;
+					sd[x][y] += pow(cellValue - average[x][y],2);
+				}
+				if (stat == 2){
+					cellValue = (ChStMx[x][y].size() > 0) ? ChStMx[x][y][0].congestTime : 0;
+					sd[x][y] += pow(cellValue - average[x][y],2);
+				}
+			}
 			
 			sd[x][y] /= numRuns;
 			sd[x][y] = sqrt(sd[x][y]);
@@ -8342,34 +8365,37 @@ int nearestStationDistance(int x, int y)
 
 	if (lookForStation(x,y))
 		return 0;
+
+	int x1,y1;
+
 	for(int dist=1; dist < xMax; dist++)
 	{
-		for (d = 0; d < dist && !found; d++)  //southwest quadrant
+		for (int d = 0; d < dist; d++)  //southwest quadrant
 		{
-                	x = max(0, carX - d);
-	                y = max(0, carY - dist + d);
-        	        if(lookForStation (x, y))
+                	x1 = max(0, x - d);
+	                y1 = max(0, y - dist + d);
+        	        if(lookForStation (x1, y1))
 				return dist;
 		}
-		for (d = 0; d < dist && !found; d++)  //northwest quadrant
+		for (int d = 0; d < dist; d++)  //northwest quadrant
 		{
-                	x = max(0, carX - dist + d);
-	                y = min(yMax - 1, carY + d);
-        	        if(lookForStation (x, y))
+                	x1 = max(0, x - dist + d);
+	                y1 = min(yMax - 1, y + d);
+        	        if(lookForStation (x1, y1))
 				return dist;
 		}
-		for (d = 0; d < dist && !found; d++)  //northeast quadrant
+		for (int d = 0; d < dist; d++)  //northeast quadrant
 		{
-                	x = min(xMax - 1, carX + d);
-	                y = min(yMax - 1, carY + dist - d);
-        	        if(lookForStation (x, y))
+                	x1 = min(xMax - 1, x + d);
+	                y1 = min(yMax - 1, y + dist - d);
+        	        if(lookForStation (x1, y1))
 				return dist;
 		}
-		for (d = 0; d < dist && !found; d++)  //southeast quadrant
+		for (int d = 0; d < dist; d++)  //southeast quadrant
 		{
-                	x = min(xMax - 1, carX + dist - d);
-	                y = max(0, carY - d);
-        	        if(lookForStation (x, y))
+                	x1 = min(xMax - 1, x + dist - d);
+	                y1 = max(0, y - d);
+        	        if(lookForStation (x1, y1))
 				return dist;
 		}
 	}
