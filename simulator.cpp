@@ -1415,7 +1415,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 
  // cout << "reloc" << endl;
 
-/*        reallocVehsLZones (CarMx,   timeTripCounts, dwLookup, zoneSharesS, t, reportProcs, totDist, unoccDist, hotStarts, coldStarts, trav,
+        reallocVehsLZones (CarMx,   timeTripCounts, dwLookup, zoneSharesS, t, reportProcs, totDist, unoccDist, hotStarts, coldStarts, trav,
                            netZoneBalance, cardDirectLZ, waitZonesTS, numZonesS, zoneSizeS, trackX, trackY, trackC,iter);
 
         randOrdering(xRandOrd, xMax);
@@ -1445,7 +1445,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
         }
 
         tempMinUnused = 0;
-*/
+
 // reset movement for all cars
         for (int x = 0; x < xMax; x++)
         {
@@ -5379,7 +5379,7 @@ void reallocVehs(int x, int y, std::vector<Car> CarMx[][yMax],  int* timeTripCou
             {
                 numfreeCars++;
             }
-            if (CarMx[x][y][i].moved == false)
+            if (CarMx[x][y][i].moved == false) // check here for move out of range?
             {
                 cNum = i;
             }
@@ -5582,7 +5582,7 @@ void reallocVehs(int x, int y, std::vector<Car> CarMx[][yMax],  int* timeTripCou
                 cNum = -1;
                 for (int i = 0; i < CarMx[x][y].size(); i++)
                 {
-                    if (CarMx[x][y][i].moved == false)
+                    if (CarMx[x][y][i].moved == false) // Add check here for moving out of range?
                     {
                         cNum = i;
                     }
@@ -5629,7 +5629,7 @@ void reallocVehs2(int x, int y, std::vector<Car> CarMx[][yMax],  int* timeTripCo
             {
                 numfreeCars++;
             }
-            if (CarMx[x][y][i].moved == false)
+            if (CarMx[x][y][i].moved == false) // Add check here for moving away from charge? +2
             {
                 cNum = i;
             }
@@ -5729,7 +5729,7 @@ void reallocVehs2(int x, int y, std::vector<Car> CarMx[][yMax],  int* timeTripCo
                 cNum = -1;
                 for (int i = 0; i < CarMx[x][y].size(); i++)
                 {
-                    if (CarMx[x][y][i].moved == false)
+                    if (CarMx[x][y][i].moved == false) // charge dist check here +2
                     {
                         cNum = i;
                     }
@@ -6331,7 +6331,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                     // find which car to move
                     for (int c = 0; c < CarMx[origX][origY].size() && moveN > 0; c++)
                     {
-                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false)
+                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false) // check here for charge dist?
                         {
                             cn = c;
                             dist = findMoveDist(origX, origY, direct, lay + 1, maxTrav, CarMx, zoneSize);
@@ -7150,6 +7150,10 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
 // determine the ideal distance to move
 double findMoveDist(int origX, int origY, int direct, int zoneEdge, int maxTrav, std::vector<Car> CarMx[][yMax],  int zoneSize)
 {
+
+    int trueDist = getCarTrav(origX,origY,85);
+    maxTrav = trueDist;
+
     double rank = 1000;
     double bestRank = 1000;
     double dist = zoneEdge;
@@ -8334,11 +8338,11 @@ void findNearestStation (Car* car, int dist, int maxDist)
 
 void assignStation (int x, int y, Car* car)
 {
-    int dist = abs(cars->x - x) + abs(car->y - y);
+    int dist = abs(car->x - x) + abs(car->y - y);
     car->inUse = true; // Already set as true when refuel is changed so probably redundant
     car->destX = x;
     car->destY = y;
-    car->refuel = ct * (/fullCharge);
+    car->refuel = ceil(((carRange - (car->gas - dist)) / carRange) * refuelTime);
     car->pickupX = -1;
     car->pickupY = -1;
     car->stationLink = true;
