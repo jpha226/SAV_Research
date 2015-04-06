@@ -8334,15 +8334,15 @@ void findNearestStation (Car* car, int dist, int maxDist)
 
 void assignStation (int x, int y, Car* car)
 {
-   
+    int dist = abs(cars->x - x) + abs(car->y - y);
     car->inUse = true; // Already set as true when refuel is changed so probably redundant
     car->destX = x;
     car->destY = y;
-
+    car->refuel = ct * (/fullCharge);
     car->pickupX = -1;
     car->pickupY = -1;
     car->stationLink = true;
-    ChStMx[x][y][0].unoccupiedDist += abs(car->x - x) + abs(car->y - y);
+    ChStMx[x][y][0].unoccupiedDist += dist;
     ChStMx[x][y][0].numCharges++;
     return;
 }
