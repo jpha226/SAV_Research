@@ -7300,7 +7300,7 @@ int getCarTrav(int x, int y, int t){
 		else if (r < 120)
 			trav = 10;
 		else
-			trav = 12;
+			trav = 11;
         } else {
         	 if (r < 20)
                         trav = 5;
