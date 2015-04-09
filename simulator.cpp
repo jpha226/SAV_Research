@@ -1488,8 +1488,8 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                         }
                     }
                 }
-		if (cellCt > 1)
-			ChStMx[x][y][0].congestTime ++;
+		if (cellCt > ChStMx[x][y][0].congestTime)
+			ChStMx[x][y][0].congestTime = cellCt;
             }
         }
 
@@ -5787,8 +5787,14 @@ void reallocVehsLZones (std::vector<Car> CarMx[][yMax],  int* timeTripCounts, do
 //                if (CarMx[c][xc][yc].inUse == false && CarMx[c][xc][yc].moved == false)
                 if (CarMx[xc][yc][c].inUse == false)
                 {
-                    carCt++;
-                    zoneBalance[xb][yb]++;
+			if (CarMx[xc][yc][c].gas > getCarTrav(xc,yc,85) + 8){
+	                	carCt++;
+                		zoneBalance[xb][yb]++;
+			}
+			else {
+				CarMx[xc][yc][c].refuel = refuelTime;
+				CarMx[xc][yc][c].inUse = true;
+			}
                 }
             }
         }
