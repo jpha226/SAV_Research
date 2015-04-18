@@ -1033,7 +1033,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
     for (t = startT; t < 288; t++)
     {
 //	if (!warmStart)
-//		cout << "Time of day: "<<t<<endl;	
+	cout << "Time of day: "<<t<<endl;	
         carCt = 0;
         for (int xc = 0; xc < xMax; xc++)
         {
@@ -1189,7 +1189,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 		}
 
 	} else { // IF WE ARE NOT MERGING WAITLIST	
-//		cout << "matching wait lists"<<endl;
+		cout << "matching wait lists: "<< TTMx[t].size() << endl;
         	for (int w = 5; w>= 0; w--)
         	{
 			if (ALGORITHM == GREEDY || warmStart)
@@ -1197,7 +1197,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                 	else
 				matchTripsToCarsScram(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 	        }
-
+		cout << "matched" << endl;
 		// initialize wait zones
         	for (int x = 0; x < numZonesL; x++)
         	{
@@ -1241,7 +1241,8 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                         // generate a new car
                 	        newCarCt ++;
                         	nCar = genNewCar (waitList[w][i]);
-				
+//				if (nCar.gas < abs(waitList[w][i].endX - nCar.x) + abs(waitList[w][i].endY - nCar.y))
+//					cout << "new car not enough" << endl;	
 //				if (waitList[w][i].waitPtr != NULL)
 				//waitList[w][i].waitPtr->carlink = true;
 //				if(t==4)
@@ -1336,7 +1337,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 //        {
 //            reportProcs = false;
 //        }
-
+	cout << "Assign refuel" << endl;
 	// Assign cars that need to refuel to a charging station
 	for (int x =0; x<xMax; x++)
 	{
@@ -1361,7 +1362,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 		}
 	}
 
-
+	cout << "move cars" << endl;
 // move all cars that are in use
         for (int x = 0; x < xMax; x++)
         {
@@ -1413,7 +1414,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 
 // reallocate vehicles based on zones
 
- // cout << "reloc" << endl;
+  cout << "realloc" << endl;
 
         reallocVehsLZones (CarMx,   timeTripCounts, dwLookup, zoneSharesS, t, reportProcs, totDist, unoccDist, hotStarts, coldStarts, trav,
                            netZoneBalance, cardDirectLZ, waitZonesTS, numZonesS, zoneSizeS, trackX, trackY, trackC,iter);
@@ -1463,7 +1464,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                 }
             }
         }
-
+	cout << "refuel cars" << endl;
 // refuel all cars that are low on gas
         for (int x = 0; x < xMax; x++)
         {
@@ -1488,8 +1489,9 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                         }
                     }
                 }
-		if (cellCt > ChStMx[x][y][0].congestTime)
-			ChStMx[x][y][0].congestTime = cellCt;
+		if (cellCt > 0)
+			if (cellCt > ChStMx[x][y][0].congestTime)
+				ChStMx[x][y][0].congestTime = cellCt;
             }
         }
 
@@ -5062,9 +5064,9 @@ Car genNewCar (Trip trp)
     randGas = rand();
     randGas = randGas / RAND_MAX;
 
-    nCar.gas = carRange * randGas;
+    nCar.gas = carRange;// * randGas;
     nCar.refuel = 0;
-
+//    cout << "New Car Gas: "<<nCar.gas<<endl;
     return nCar;
 }
 
@@ -5231,7 +5233,8 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
         cout << endl; // << "Tot dist " << totDist << endl;
         cout << "Moving car from " << x << "," << y << " to " << tCar.x << "," << tCar.y << endl;
     }
-
+//    if(CarMx[x][y][c].gas < abs(x - tCar.x) + abs(y - tCar.y))
+//	cout << "Not enough fuel: " << CarMx[x][y][c].refuel << endl;
     move (CarMx, x, y, tCar.x, tCar.y, c, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts, trackX, trackY, trackC, iter);
 
     return;
@@ -5787,14 +5790,14 @@ void reallocVehsLZones (std::vector<Car> CarMx[][yMax],  int* timeTripCounts, do
 //                if (CarMx[c][xc][yc].inUse == false && CarMx[c][xc][yc].moved == false)
                 if (CarMx[xc][yc][c].inUse == false)
                 {
-			if (CarMx[xc][yc][c].gas > getCarTrav(xc,yc,85) + 8){
+//			if (CarMx[xc][yc][c].gas > getCarTrav(xc,yc,85) + 8){
 	                	carCt++;
                 		zoneBalance[xb][yb]++;
-			}
-			else {
-				CarMx[xc][yc][c].refuel = refuelTime;
-				CarMx[xc][yc][c].inUse = true;
-			}
+//			}
+//			else {
+//				CarMx[xc][yc][c].refuel = refuelTime;
+//				CarMx[xc][yc][c].inUse = true;
+//			}
                 }
             }
         }
@@ -8344,11 +8347,14 @@ void findNearestStation (Car* car, int dist, int maxDist)
 
 void assignStation (int x, int y, Car* car)
 {
-    int dist = abs(car->x - x) + abs(car->y - y);
+    float dist = 1.0 * abs(car->x - x) + abs(car->y - y);
     car->inUse = true; // Already set as true when refuel is changed so probably redundant
     car->destX = x;
     car->destY = y;
-    car->refuel = ceil(((carRange - (car->gas - dist)) / carRange) * refuelTime);
+    car->refuel = ceil(min((carRange - (car->gas - dist)) / carRange, 1.0f) * refuelTime);
+    if (car->refuel > refuelTime)
+	    cout << "Percent: " << ((carRange - (car->gas - dist)) / carRange) << " gas left at station: " << car->gas - dist << endl;
+//    cout << car->refuel << endl;
     car->pickupX = -1;
     car->pickupY = -1;
     car->stationLink = true;
