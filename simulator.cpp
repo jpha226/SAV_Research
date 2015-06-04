@@ -154,15 +154,15 @@ const int refuelTime = 2; // 48 -- should be two for normal
 const int refuelDist = 0; //40
 const int rejectLimit = 1000000000; // Really high means it won't be used
 #else
-const int carRange = 320; // 320 = 80 miles or 1000 = 250 miles
-const int refuelTime = 48; // 48 = 4 hours or 6 = 30 minutes
+const int carRange = 256; // 320 = 80 miles or 1000 = 250 miles
+const int refuelTime = 6; // 48 = 4 hours or 6 = 30 minutes
 const int refuelDist = 0; // Refuels if only 40 cells = 10 miles left, set to 0 to disable
 const int rejectLimit = 1; // Set to 1000000000 to disable
 #endif
 
 vector<int> random_seeds;
 
- long totDistRun, totUnoccDistRun, totCarsRun, totTripsRun, totHSRun, totCSRun, totWaitTRun, totUnservedTRun, totUnusedRun, totUnoccRun, maxAvailCars, maxAvailStations;
+ long totDistRun, totUnoccDistRun, totReallocDistRun, totCarsRun, totTripsRun, totHSRun, totCSRun, totWaitTRun, totUnservedTRun, totUnusedRun, totUnoccRun, maxAvailCars, maxAvailStations;
     long totWaitCountRun[6];
     long totUnoccChargeDistRun, totChargeTimeRun, totNumChargeRun, totCongestTimeRun;
     long totMaxCarInUse, totMaxCarCharging, totMaxCarNoUse;
@@ -186,6 +186,7 @@ vector<int> random_seeds;
     double totMaxCarNoUseCOV [maxNumRuns];
     double totDistRunCOV [maxNumRuns]; 
     double totUnoccDistRunCOV [maxNumRuns]; 
+    double totReallocDistRunCOV [maxNumRuns];
     double totUnoccChargeDistRunCOV[maxNumRuns];
     double totChargeTimeRunCOV[maxNumRuns];
     double totCongestTimeRunCOV[maxNumRuns];
@@ -212,14 +213,12 @@ vector<int> random_seeds;
 
 
     bool error, reportProcs, readFile, wStart;
-    int maxTrav, maxTravC, totDist, unoccDist, waitT, saveRate, startIter, unservedT, coldStarts, hotStarts, numRuns, nCars, randomSeed, unoccChargeDist;
+    int maxTrav, maxTravC, totDist, unoccDist, reallocDist, waitT, saveRate, startIter, unservedT, coldStarts, hotStarts, numRuns, nCars, randomSeed, unoccChargeDist;
     int tripsReassigned, totTripsReassigned;
     int nStations;
 
     double maxCarUse [288];
     double maxCarOcc [288];
-
-    vector <Trip> carryOver;
 
     int maxCarInUse, maxCarCharging, maxCarNoUse;
 
@@ -564,6 +563,7 @@ void initVars (int runNum, bool warmStart, bool checkStationDistance)
 
     totDist = 0;
     unoccDist = 0;
+    reallocDist = 0;
     waitT = 0;
     reportProcs = false;
     saveRate = 0;
@@ -1663,6 +1663,17 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 		}
 	}
 
+	// Go through waitList and increment unserved for trips still on it, also these trips do not count against waitTime
+	for(int i=0; i<6; i++){
+		for (int j=0; j<waitList[i].size(); j++)
+		{
+			if (waitList[i][j].carlink == false){ // unserved
+				waitList[i][j].waitPtr->waitTime = 0;
+				unservedT++;
+			}
+		}
+	}
+
 	// Calculate true wait times
 	for(int i=0; i<6; i++)
 		waitCount[i]=0;
@@ -1695,6 +1706,7 @@ void placeInitCars (std::vector<Car> CarMx[][yMax],   int* timeTripCounts, doubl
 //    maxCarOcc = 20000;
     totDist = 0;
     unoccDist = 0;
+    reallocDist = 0;
     waitT = 0;
 
 /*
@@ -1956,8 +1968,9 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
 //    cout << "Total number of trips reassigned "<< tripsReassigned << endl;
     cout << "Average wait time " << avgWait << endl;
     cout << "Total miles traveled " << totDist / 4 << endl;
-    cout << "Total unoccupied miles traveled " << unoccDist / 4 << endl;
-    cout << "Total unoccupied miles to charge " << chargeDist / 4 << endl;
+    cout << "Total unoccupied miles traveled " << unoccDist / 4.0 << endl;
+    cout << "Total reallocation miles traveled " << reallocDist / 4.0 << endl;
+    cout << "Total unoccupied miles to charge " << chargeDist / 4.0 << endl;
     cout << "Total Charges "<< chargeCount << endl;
     cout << "Total Charge Time " << chargeTime << endl;
     cout << "Average Congestion Time per Station " << congestTime / nStations << endl;
@@ -1997,6 +2010,7 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
     totCSRun = totCSRun + coldStarts;
     totDistRun = totDistRun + totDist;
     totUnoccDistRun = totUnoccDistRun + unoccDist;
+    totReallocDistRun += reallocDist;
     totUnoccChargeDistRun = totUnoccChargeDistRun + chargeDist;
     totChargeTimeRun += chargeTime;
     totCongestTimeRun += congestTime;
@@ -2024,6 +2038,7 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
 
     totDistRunCOV[runNum-1] = totDist;
     totUnoccDistRunCOV[runNum-1] = unoccDist;
+    totReallocDistRunCOV[runNum-1] = reallocDist;
     totUnoccChargeDistRunCOV[runNum-1] = chargeDist;
     totChargeTimeRunCOV[runNum-1] = chargeTime;
     totNumChargeRunCOV[runNum-1] = chargeCount;
@@ -2060,7 +2075,7 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
                          double* totPctMaxInUseCOV, double* totPctMaxOccCOV, double* totPctColdShareCOV, int numRuns)
 {
     char dummyStr[20];
-    double totDistRunCOVF, totUnoccDistRunCOVF, totUnoccChargeDistRunCOVF, totCongestTimeRunCOVF, totCarsRunCOVF, totTripsRunCOVF, totHSRunCOVF, totCSRunCOVF, totWaitTRunCOVF, totUnservedTRunCOVF, totChargeTimeRunCOVF, totNumChargeRunCOVF,
+    double totDistRunCOVF, totUnoccDistRunCOVF, totReallocDistRunCOVF, totUnoccChargeDistRunCOVF, totCongestTimeRunCOVF, totCarsRunCOVF, totTripsRunCOVF, totHSRunCOVF, totCSRunCOVF, totWaitTRunCOVF, totUnservedTRunCOVF, totChargeTimeRunCOVF, totNumChargeRunCOVF,
            totWaitCountRunCOVF, totUnusedRunCOVF, totUnoccRunCOVF, totAvgWaitCOVF, totAvgTripDistCOVF, totStartsPerTripCOVF, totAvgTripsPerCarCOVF,
            totPctMaxWaitFiveCOVF, totPctInducedTCOVF, totPctMaxInUseCOVF, totPctMaxOccCOVF, totPctColdShareCOVF, totMaxCarInUseCOVF, totMaxCarChargingCOVF, totMaxCarNoUseCOVF;
 
@@ -2069,6 +2084,7 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
     findCOV (totMaxCarNoUseCOVF, totMaxCarNoUseCOV, numRuns);
     findCOV (totDistRunCOVF, totDistRunCOV, numRuns);
     findCOV (totUnoccDistRunCOVF, totUnoccDistRunCOV, numRuns);
+    findCOV (totReallocDistRunCOVF, totReallocDistRunCOV, numRuns);
     findCOV(totUnoccChargeDistRunCOVF, totUnoccDistRunCOV, numRuns);
     findCOV(totCongestTimeRunCOVF, totCongestTimeRunCOV, numRuns);
     findCOV(totChargeTimeRunCOVF, totChargeTimeRunCOV, numRuns);
@@ -2104,6 +2120,7 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
     totDistRun = totDistRun / numRuns;
     totUnoccDistRun = totUnoccDistRun / numRuns;
     totUnoccChargeDistRun = totUnoccChargeDistRun / numRuns;
+    totReallocDistRun /= (1.0*numRuns);
     totCongestTimeRun = totCongestTimeRun / numRuns;
     totNumChargeRun = totNumChargeRun / numRuns;
     totChargeTimeRun = totChargeTimeRun / numRuns;
@@ -2133,6 +2150,7 @@ void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun,
     cout << "Average number of reassigned trips: " << totTripsReassigned / (1.0 * numRuns)<< endl;
     cout << "Average total miles traveled " << totDistRun / 4 << "     COV: " << totDistRunCOVF << "\tsd: "<<(totDistRun / 4.0)* totDistRunCOVF<< endl;
     cout << "Average total unocc mi traveled  " << totUnoccDistRun / 4 << "  COV: " << totUnoccDistRunCOVF << "\tsd: "<<(totUnoccDistRun / 4.0) * totUnoccDistRunCOVF<< endl;
+    cout << "Average reallocation mi traveled " << totReallocDistRun / 4 << " COV: " << totReallocDistRunCOVF << endl;
     cout << "Average miles to charge " << totUnoccChargeDistRun / 4 << "   COV: " << totUnoccChargeDistRunCOVF << endl;
     cout << "Average charge time " << totChargeTimeRun << "   COV: " << totChargeTimeRunCOVF << endl;
     cout << "Average number of charges " << totNumChargeRun << "   COV: " << totNumChargeRunCOVF << endl;
@@ -5108,6 +5126,7 @@ void findNearestCar (Trip& trp, std::vector<Car> CarMx[][yMax], int dist, int ma
         if (trp.waitPtr != NULL)
         {
             trp.waitPtr -> waitTime = trp.waitTime;
+	    trp.waitPtr-> carlink = true;
         }
 	//if (trp.waitPtr == &TTMx[3][0])
 	//	cout << "wait list trip! "<<waitTrav<<endl;	
@@ -5161,7 +5180,8 @@ bool lookForCar (int x, int y, int r, int dist, int& cn, std::vector<Car> CarMx[
 					CarMx[x][y][c].pickupX = -1;
 					CarMx[x][y][c].pickupY = -1;
 					CarMx[x][y][c].currTrip = NULL;
-					cellChargeCount[x][y][r] ++;
+					if (CHARGE_IN_PLACE)
+						cellChargeCount[x][y][r] ++;
 					CarMx[x][y][c].inUse = true;
 				}
 			}
@@ -5306,10 +5326,12 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
                 } else if (tCar.pickupX > tCar.x) {
                         tCar.x = tCar.x + trav;
                         totDist = totDist + trav;
+			unoccDist += trav;
                         trav = 0;
                 } else {
                         tCar.x = tCar.x - trav;
                         totDist = totDist + trav;
+			unoccDist += trav;
                         trav = 0;
                 }
         }
@@ -5329,10 +5351,12 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
                 } else if (tCar.pickupY > tCar.y) {
                         tCar.y = tCar.y + trav;
                         totDist = totDist + trav;
+			unoccDist += trav;
                         trav = 0;
                 } else {
                         tCar.y = tCar.y - trav;
                         totDist = totDist + trav;
+			unoccDist += trav;
                         trav = 0;
                 }
         }
@@ -5345,7 +5369,7 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
         cout << "Tot dist " << totDist << endl;
     }
 
-      if (trav > 0 || (trav == 0 && tCar.pickupX == tCar.x && tCar.pickupY == tCar.y)){
+      if (trav > 0 || (trav == 0 && tCar.pickupX == tCar.x && tCar.pickupY == tCar.y)){ // Car reached pick up location
 
 	// If car is not refueling and at pick up location
 	if (tCar.refuel == 0 && tCar.currTrip != NULL){
@@ -5355,28 +5379,29 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
 			double waitTrav = abs(tCar.currTrip->startX - x) + abs(tCar.currTrip->startY - y);
 			wait = 5 * (t - tCar.currTrip->startTime);
 			wait +=  (5 * waitTrav / maxTrav);
-			CarMx[x][y][c].currTrip->waitTime = wait;
-			if (abs(wait - CarMx[x][y][c].currTrip->waitTime) >= 0.000001){
+			//CarMx[x][y][c].currTrip->waitTime = wait;
+			/*if (abs(wait - CarMx[x][y][c].currTrip->waitTime) >= 0.000001){
 				cout << "Time: " << tCar.currTrip->startTime << " " << t <<endl;
 				cout << "Wait time error: " << wait << " " << CarMx[x][y][c].currTrip->waitTime<<endl;
 				cout << "Wait Trav: "<<waitTrav<< " over "<< maxTrav<<endl;
 				cout << "Car at: "<<x<<","<<y<<" Trip start: "<<tCar.currTrip->startX<<","<<tCar.currTrip->startY<<endl;
 				cout << "Travel: "<<trav<<endl;
-			}
+			}*/ // This will print out an error but it is due to speed changes in different zones
+			CarMx[x][y][c].currTrip->waitTime = wait;
 		}
 	}
 
 	CarMx[x][y][c].pickupX = -1;
         CarMx[x][y][c].pickupY = -1;
 
+
 	}
     else { // Car did not reach pick up location
 //	if (ALGORITHM == GREEDY)
 //		cout << "should not be in here for GREEDY match"<<endl;
-         unoccDist = unoccDist + trav;
-        totDist = totDist + trav;
-        waitT = waitT + trav;
-
+	if (CarMx[x][y][c].refuel == 0){
+          waitT = waitT + trav;
+	}
     }
 
     // move the car in the x direction
@@ -5415,6 +5440,10 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
             totDist = totDist + trav;
         }
     }
+
+    // Moving to charging station is unoccupied travel
+    if (CarMx[x][y][c].refuel > 0)
+	unoccDist += maxTrav - trav;
 
     // now that we have the new destination, move the car
     if (reportProcs)
@@ -5769,7 +5798,7 @@ void reallocVehs(int x, int y, std::vector<Car> CarMx[][yMax],  int* timeTripCou
 
                 totDist++;
                 unoccDist++;
-
+		reallocDist++;
                 // find next non-moved vehicle
                 cNum = -1;
                 for (int i = 0; i < CarMx[x][y].size(); i++)
@@ -5916,6 +5945,7 @@ void reallocVehs2(int x, int y, std::vector<Car> CarMx[][yMax],  int* timeTripCo
 
                 totDist = totDist + 2;
                 unoccDist = unoccDist + 2;
+		reallocDist += 2;
 
                 // find next non-moved vehicle
                 cNum = -1;
@@ -6537,6 +6567,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                             move (CarMx, origX, origY, origX, origY + dist, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                   trackX, trackY, trackC, iter);
                             unoccDist = unoccDist + dist;
+			    reallocDist += dist;
                             totDist = totDist + dist;
                             c--;
                             moveN--;
@@ -6573,6 +6604,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                             move (CarMx,  origX, origY, origX + dist, origY, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                   trackX, trackY, trackC,iter);
                             unoccDist = unoccDist + dist;
+			    reallocDist += dist;
                             totDist = totDist + dist;
                             c--;
                             moveE--;
@@ -6609,6 +6641,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                             move (CarMx, origX, origY, origX, origY - dist, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                   trackX, trackY, trackC, iter);
                             unoccDist = unoccDist + dist;
+			    reallocDist += dist;
                             totDist = totDist + dist;
                             c--;
                             moveS--;
@@ -6645,6 +6678,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                             move (CarMx,  origX, origY, origX - dist, origY, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                   trackX, trackY, trackC,iter);
                             unoccDist = unoccDist + dist;
+			    reallocDist += dist;
                             totDist = totDist + dist;
                             c--;
                             moveW--;
@@ -6686,6 +6720,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                             move (CarMx,  origX, origY, origX, origY - dist, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                   trackX, trackY, trackC,iter);
                             unoccDist = unoccDist + dist;
+			    reallocDist += dist;
                             totDist = totDist + dist;
                             c--;
                             moveS--;
@@ -6722,6 +6757,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                             move (CarMx,  origX, origY, origX - dist, origY, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                   trackX, trackY, trackC,iter);
                             unoccDist = unoccDist + dist;
+			    reallocDist += dist;
                             totDist = totDist + dist;
                             c--;
                             moveW--;
@@ -6758,6 +6794,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                             move (CarMx,  origX, origY, origX, origY + dist, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                   trackX, trackY, trackC,iter);
                             unoccDist = unoccDist + dist;
+			    reallocDist += dist;
                             totDist = totDist + dist;
                             c--;
                             moveN--;
@@ -6794,6 +6831,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                             move (CarMx,  origX, origY, origX + dist, origY, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                   trackX, trackY, trackC,iter);
                             unoccDist = unoccDist + dist;
+			    reallocDist += dist;
                             totDist = totDist + dist;
                             c--;
                             moveE--;
@@ -7089,6 +7127,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                                     move (CarMx,  ix, iy, ix, iy - dist, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                           trackX, trackY, trackC,iter);
                                     unoccDist = unoccDist + dist;
+				    reallocDist += dist;
                                     totDist = totDist + dist;
                                     c--;
                                     pullN--;
@@ -7120,6 +7159,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                                     move (CarMx, ix, iy, ix, iy + dist, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                           trackX, trackY, trackC,iter);
                                     unoccDist = unoccDist + dist;
+				    reallocDist += dist;
                                     totDist = totDist + dist;
                                     c--;
                                     pullS--;
@@ -7151,6 +7191,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                                     move (CarMx, ix, iy, ix + dist, iy, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                           trackX, trackY, trackC,iter);
                                     unoccDist = unoccDist + dist;
+				    reallocDist += dist;
                                     totDist = totDist + dist;
                                     c--;
                                     pullW--;
@@ -7182,6 +7223,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                                     move (CarMx, ix, iy, ix - dist, iy, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                           trackX, trackY, trackC,iter);
                                     unoccDist = unoccDist + dist;
+				    reallocDist += dist;
                                     totDist = totDist + dist;
                                     c--;
                                     pullE--;
@@ -7226,6 +7268,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                                     move (CarMx, ix, iy, ix, iy - dist, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                           trackX, trackY, trackC,iter);
                                     unoccDist = unoccDist + dist;
+				    reallocDist += dist;
                                     totDist = totDist + dist;
                                     c--;
                                     pullN--;
@@ -7257,6 +7300,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                                     move (CarMx, ix, iy, ix, iy + dist, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                           trackX, trackY, trackC,iter);
                                     unoccDist = unoccDist + dist;
+				    reallocDist += dist;
                                     totDist = totDist + dist;
                                     c--;
                                     pullS--;
@@ -7288,6 +7332,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                                     move (CarMx, ix, iy, ix + dist, iy, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                           trackX, trackY, trackC,iter);
                                     unoccDist = unoccDist + dist;
+				    reallocDist += dist;
                                     totDist = totDist + dist;
                                     c--;
                                     pullW--;
@@ -7319,6 +7364,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                                     move (CarMx, ix, iy, ix - dist, iy, cn, t, dwLookup,  timeTripCounts, reportProcs, hotStarts, coldStarts,
                                           trackX, trackY, trackC,iter);
                                     unoccDist = unoccDist + dist;
+				    reallocDist += dist;
                                     totDist = totDist + dist;
                                     c--;
                                     pullE--;
@@ -7474,6 +7520,12 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
         {
             tCar.refuel = refuelTime; // Changed to 48 from 2 (wait time is now 4 hours instead of 10 minutes)
             tCar.inUse = true;
+            tCar.destX = dx;
+            tCar.destY = dy;
+            tCar.pickupX = -1;
+            tCar.pickupY = -1;
+            tCar.currTrip = NULL;
+
 	    //tCar.currTrip = NULL;
 	    //cellChargeCount[tCar.x][tCar.y][iter]++;
         }
@@ -8305,6 +8357,7 @@ void reportMatchingResults()
 	cout << "Number of trips: " << nTrips << endl;
 	cout << "Number of cars: " << nCars << endl;
 	cout << "Unoccupied travel: " << unoccDist / 4.0<< endl;
+        cout << "Relocation travel: " << reallocDist / 4.0 << endl;
 	cout << "Total Travel: " << avgDist << endl;
 	cout << "Total wait time: " << avgWait << endl;
 	cout << "Unserved trips: " << unservedT << endl;
