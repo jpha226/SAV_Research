@@ -109,6 +109,7 @@ struct Car
     Trip* currTrip;
     bool stuck;
     bool stationLink;
+    bool needFuel;
 };
 
 struct Station
@@ -147,7 +148,7 @@ const int tripDistSize = 60;
 const int zoneSizeL = xMax / numZonesL; // 8
 const int zoneSizeS = xMax / numZonesS; // 4
 const int maxNumRuns = 65;
-const int numWarmRuns = 15;//20; // 20
+const int numWarmRuns = 20;//20; // 20
 
 #if SIMULATOR == SAV
 const int carRange = 1600; //1600;//320;
@@ -155,7 +156,7 @@ const int refuelTime = 2; // 48 -- should be two for normal
 const int refuelDist = 0; //40
 const int rejectLimit = 1000000000; // Really high means it won't be used
 #else
-const int carRange = 256; // 320 = 80 miles or 1000 = 250 miles
+const int carRange = 640; // 320 = 80 miles or 1000 = 250 miles
 const int refuelTime = 6; // 48 = 4 hours or 6 = 30 minutes
 const int refuelDist = 0; // Refuels if only 40 cells = 10 miles left, set to 0 to disable
 const int rejectLimit = 1; // Set to 1000000000 to disable
@@ -1439,6 +1440,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 //                                        if (CHARGE_IN_PLACE)
 //                                                cellChargeCount[x][y][r] ++;
                                         CarMx[x][y][c].inUse = true;
+					CarMx[x][y][c].needFuel = true;
 
 				}
 			}
@@ -1511,11 +1513,11 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                 for(int y=0; y<yMax; y++){
                         for( int c=0; c<CarMx[x][y].size(); c++){
 
-                                if (CarMx[x][y][c].inUse && CarMx[x][y][c].refuel == 0){
+                                if (CarMx[x][y][c].inUse && !CarMx[x][y][c].needFuel){//refuel == 0){
 					inUse ++;
 					inUse_max_charge ++;
 				}
-				if (CarMx[x][y][c].inUse && CarMx[x][y][c].refuel > 0){
+				if (CarMx[x][y][c].inUse && CarMx[x][y][c].needFuel){//refuel > 0){
 					charging++;
 					charging_max_charge++;
 				}
@@ -1654,7 +1656,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
             }
         }
 	//cout << "refuel cars" << endl;
-// refuel all cars that are low on gas
+// refuel all cars that are low on fuel
         for (int x = 0; x < xMax; x++)
         {
             for (int y = 0; y < yMax; y++)
@@ -1663,7 +1665,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 		int cellCt = 0;
                 for (int c = 0; c < CarMx[x][y].size(); c++)
                 {
-                    if (CarMx[x][y][c].refuel > 0) // need to refuel and at a station
+                    if (CarMx[x][y][c].needFuel)//CarMx[x][y][c].refuel > 0) // need to refuel and at a station
                     {
 			if (CHARGE_IN_PLACE){
 
@@ -1675,6 +1677,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
         	                    CarMx[x][y][c].inUse = false;
 				    CarMx[x][y][c].numRejects = 0;
 				    CarMx[x][y][c].stationLink = false;
+				    CarMx[x][y][c].needFuel = false;
                         	}
 	                } else if (!CHARGE_IN_PLACE && ChStMx[x][y].size() > 0){
 				cellCt++;
@@ -1688,6 +1691,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 					CarMx[x][y][c].inUse = false;
 					CarMx[x][y][c].numRejects = 0;
 					CarMx[x][y][c].stationLink = false;
+					CarMx[x][y][c].needFuel = false;
 				}
 		        }
 		    }
@@ -1704,11 +1708,11 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 //        {
 //            maxCarUse = tempMinUnused;
 //        }
-	if (t % 25 == 0 && !warmStart){
+/*	if (t == 200 && !warmStart && (iter % 10 == 0 || iter ==1)){
 		cout << "Writing heat map" << endl;
 		writeHeatMap(iter,t);
 	}
-
+*/
     } // END MAIN LOOP
 
     //runSummary(warmStart, lastWarm, zoneGen, waitZones, netZoneBalance, tripO, tripD, cardDirectLZ, cardDirect, cardDirect2,  timeTripCounts);
@@ -5372,6 +5376,7 @@ Car genNewCar (Trip trp)
     nCar.tripCt = 0;
     nCar.numRejects = 0;
     nCar.stuck = false;
+    nCar.needFuel = false;
     nCar.stationLink = false;
     randGas = rand();
     randGas = randGas / RAND_MAX;
@@ -8499,6 +8504,13 @@ void findNearestStation (Car* car, int dist, int maxDist)
     bool found = false;
     int d,r;
  
+/*    if (car->gas == carRange){
+	car->inUse = false;
+	car->refuel = 0;
+	car->needFuel = false;
+	return;
+    }*/
+
     if (dist == 0)
     {
         found = lookForStation (x, y);
@@ -8696,19 +8708,20 @@ void findNearestStation (Car* car, int dist, int maxDist)
 
 void assignStation (int x, int y, Car* car)
 {
-    float dist = 1.0 * abs(car->x - x) + abs(car->y - y);
-    car->inUse = true; // Already set as true when refuel is changed so probably redundant
-    car->destX = x;
-    car->destY = y;
-    car->refuel = ceil(min((carRange - (car->gas - dist)) / carRange, 1.0f) * refuelTime);
-    if (car->refuel > refuelTime)
-	    cout << "Percent: " << ((carRange - (car->gas - dist)) / carRange) << " gas left at station: " << car->gas - dist << endl;
+      float dist = 1.0 * abs(car->x - x) + abs(car->y - y);
+      car->inUse = true; // Already set as true when refuel is changed so probably redundant
+      car->destX = x;
+      car->destY = y;
+      car->refuel = ceil(min((carRange - (car->gas - dist)) / carRange, 1.0f) * refuelTime);
+      if (car->refuel > refuelTime)
+  	    cout << "Percent: " << ((carRange - (car->gas - dist)) / carRange) << " gas left at station: " << car->gas - dist << endl;
 //    cout << car->refuel << endl;
-    car->pickupX = -1;
-    car->pickupY = -1;
-    car->stationLink = true;
-    ChStMx[x][y][0].unoccupiedDist += dist;
-    ChStMx[x][y][0].numCharges++;
+      car->pickupX = -1;
+      car->pickupY = -1;
+      car->stationLink = true;
+      ChStMx[x][y][0].unoccupiedDist += dist;
+      ChStMx[x][y][0].numCharges++;
+
     return;
 }
 
@@ -8790,7 +8803,7 @@ void writeHeatMap(int run, int time){
 
 	ofstream outfile;
 	stringstream stream;
-	stream << "heatmaps2/heatmap_r_" << run << "_t_" << time << ".csv";
+	stream << "heatmaps/heatmap_160mi_r_" << run << "_t_" << time << ".csv";
 	std::string file_name(stream.str());
 	outfile.open(file_name.c_str());
 
@@ -8804,4 +8817,23 @@ void writeHeatMap(int run, int time){
 		outfile << endl;
 	}
 	outfile.close();
+
+	if (run == 1)
+	{
+		ofstream outfile2;
+		outfile2.open("heatmaps/chargemap_160mi.csv");
+
+		for(int x=0; x<xMax; x++){
+			for(int y=0; y<yMax; y++){
+				if (y > 0)
+					outfile2 << ",";
+				if(ChStMx[x][y].size() > 0)
+					outfile2 << "1";
+				else
+					outfile2 << "0";
+			}
+			outfile2 << endl;
+		}
+		outfile2.close();
+	}
 }
