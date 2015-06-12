@@ -156,7 +156,7 @@ const int refuelTime = 2; // 48 -- should be two for normal
 const int refuelDist = 0; //40
 const int rejectLimit = 1000000000; // Really high means it won't be used
 #else
-const int carRange = 640; // 320 = 80 miles or 1000 = 250 miles
+const int carRange = 256; // 320 = 80 miles or 1000 = 250 miles
 const int refuelTime = 6; // 48 = 4 hours or 6 = 30 minutes
 const int refuelDist = 0; // Refuels if only 40 cells = 10 miles left, set to 0 to disable
 const int rejectLimit = 1; // Set to 1000000000 to disable
@@ -1429,9 +1429,9 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 	for (int x=0; x<xMax; x++){
 		for (int y=0; y<yMax; y++){
 			for (int c=0; c<CarMx[x][y].size(); c++){
-				if (CarMx[x][y][c].numRejects > rejectLimit && !CarMx[x][y][c].inUse)
+				if (CarMx[x][y][c].numRejects > rejectLimit && !CarMx[x][y][c].inUse && CarMx[x][y][c].gas < carRange)
 				{
-                                        CarMx[x][y][c].refuel = refuelTime;
+//                                        CarMx[x][y][c].refuel = refuelTime;
                                         CarMx[x][y][c].destX = x;
                                         CarMx[x][y][c].destY = y;
                                         CarMx[x][y][c].pickupX = -1;
@@ -1478,7 +1478,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 			{
 				for (int c =0; c<CarMx[x][y].size(); c++)
 				{
-					if(CarMx[x][y][c].refuel > 0){
+					if(CarMx[x][y][c].needFuel){//refuel > 0){
 						if (SPEED == VARY)
 							trav = getCarTrav(x,y,t);
 
@@ -1579,7 +1579,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                     	}
 		    }
 		    else{
-		    	if (CarMx[x][y][c].moved == false && CarMx[x][y][c].refuel != 0){
+		    	if (CarMx[x][y][c].moved == false && CarMx[x][y][c].needFuel){
 				tempCarOcc++;
 			}
 		    }
@@ -1672,7 +1672,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                         	CarMx[x][y][c].refuel--;
 	                        CarMx[x][y][c].gas = carRange;
 				cellChargeTime[x][y][iter] ++;
-                	        if (CarMx[x][y][c].refuel == 0)
+                	        if (CarMx[x][y][c].refuel <= 0) // could possibly be zero
 	                        {
         	                    CarMx[x][y][c].inUse = false;
 				    CarMx[x][y][c].numRejects = 0;
@@ -1685,7 +1685,7 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 				CarMx[x][y][c].refuel--;
 				CarMx[x][y][c].gas = carRange;
 				cellChargeTime[x][y][iter] ++;
-				if (CarMx[x][y][c].refuel == 0)
+				if (CarMx[x][y][c].refuel <= 0) // could possibly be zero when starting here
 				{
 					//cout << "Car done charging" << endl;
 					CarMx[x][y][c].inUse = false;
@@ -2067,10 +2067,10 @@ void reportResults ( int* timeTripCounts, std::vector<Car> CarMx[][yMax],  doubl
     cout << "SAEV with charging station:" << endl;
     cout << "Maximum number of cars in use during max use 5 minute period " << maxCarInUse << endl;
     cout << "Maximum number of cars charging in max use 5 minute period " << maxCarCharging << endl;
-    cout << "Maximum number of cars unused or reallocated in max charging 5 minute period " << maxCarNoUse<< endl;
+    cout << "Maximum number of cars unused or reallocated in max use 5 minute period " << maxCarNoUse<< endl;
     cout << "Maximum number of cars in use during max charging 5 minute period " << maxInUseCharge << endl;
     cout << "Maximum number of cars charging in max charging 5 minute period " << maxChargingCharge << endl;
-    cout << "Maximum number of cars unused or reallocated in max use 5 minute period " << maxNoUseCharge<< endl;
+    cout << "Maximum number of cars unused or reallocated in max charging 5 minute period " << maxNoUseCharge<< endl;
     cout << "Total # of hot starts " << hotStarts << endl;
     cout << "Total # of cold starts " << coldStarts << endl << endl;
 
@@ -5395,7 +5395,7 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
     // identify target car in the car matrix
     Car tCar = CarMx[x][y][c];
     bool needFuel = false;
-    if(tCar.refuel > 0){
+    if(tCar.needFuel){
 	needFuel = true;
 	//tCar.pickupX = -1;
 	//tCar.pickupY = -1;
@@ -5480,7 +5480,7 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
       if (trav > 0 || (trav == 0 && tCar.pickupX == tCar.x && tCar.pickupY == tCar.y)){ // Car reached pick up location
 
 	// If car is not refueling and at pick up location
-	if (tCar.refuel == 0 && tCar.currTrip != NULL){
+	if (!tCar.needFuel && tCar.currTrip != NULL){
 	
 		if(tCar.x == tCar.currTrip->startX && tCar.y == tCar.currTrip->startY){
 
@@ -5507,7 +5507,7 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
     else { // Car did not reach pick up location
 //	if (ALGORITHM == GREEDY)
 //		cout << "should not be in here for GREEDY match"<<endl;
-	if (CarMx[x][y][c].refuel == 0){
+	if (CarMx[x][y][c].needFuel == false){
           waitT = waitT + trav;
 	}
     }
@@ -5550,7 +5550,7 @@ void moveCar (std::vector<Car> CarMx[][yMax],  int x, int y, int c, int t, int m
     }
 
     // Moving to charging station is unoccupied travel
-    if (CarMx[x][y][c].refuel > 0)
+    if (CarMx[x][y][c].needFuel)
 	unoccDist += maxTrav - trav;
 
     // now that we have the new destination, move the car
@@ -6122,6 +6122,7 @@ void reallocVehsLZones (std::vector<Car> CarMx[][yMax],  int* timeTripCounts, do
 			}
 			else {
 				CarMx[xc][yc][c].refuel = refuelTime;
+				CarMx[xc][yc][c].needFuel = true;
 				CarMx[xc][yc][c].inUse = true;
 			}
                 }
@@ -6504,7 +6505,7 @@ double findFreeCars (int x, int y, std::vector<Car> CarMx[][yMax])
 
     for (int c = 0; c < CarMx[x][y].size(); c++)
     {
-        if (CarMx[x][y][c].inUse == false)
+        if (CarMx[x][y][c].inUse == false && (CHARGE_IN_PLACE || CarMx[x][y][c].gas > getCarTrav(x,y,85) + 8))
         {
             nCars++;
         }
@@ -6548,7 +6549,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
         {
             for (int c = 0; c < CarMx[x][y].size(); c++)
             {
-                if (CarMx[x][y][c].inUse == false && CarMx[x][y][c].moved == false)
+                if (CarMx[x][y][c].inUse == false && CarMx[x][y][c].moved == false && (CHARGE_IN_PLACE || CarMx[x][y][c].gas > getCarTrav(x,y,85) + 8))
                 {
                     nFreeCars = nFreeCars + 1;
                     freeCarMap[x - (tx * zoneSize)][y - (ty * zoneSize)]++;
@@ -6666,7 +6667,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                     // find which car to move
                     for (int c = 0; c < CarMx[origX][origY].size() && moveN > 0; c++)
                     {
-                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false) // check here for charge dist?
+                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false && (CHARGE_IN_PLACE || CarMx[origX][origY][c].gas > getCarTrav(origX,origY,85)+8)) // check here for charge dist?
                         {
                             cn = c;
                             dist = findMoveDist(origX, origY, direct, lay + 1, maxTrav, CarMx, zoneSize);
@@ -6703,7 +6704,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                     // find which car to move
                     for (int c = 0; c < CarMx[origX][origY].size() && moveE > 0; c++)
                     {
-                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false)
+                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false && (CHARGE_IN_PLACE || CarMx[origX][origY][c].gas > getCarTrav(origX,origY,85)+8))
                         {
                             cn = c;
                             dist = findMoveDist(origX, origY, direct, lay + 1, maxTrav, CarMx, zoneSize);
@@ -6740,7 +6741,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                     // find which car to move
                     for (int c = 0; c < CarMx[origX][origY].size() && moveS > 0; c++)
                     {
-                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false)
+                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false && (CHARGE_IN_PLACE || CarMx[origX][origY][c].gas > getCarTrav(origX,origY,85)+8))
                         {
                             cn = c;
                             dist = findMoveDist(origX, origY, direct, lay + 1, maxTrav, CarMx, zoneSize);
@@ -6777,7 +6778,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                     // find which car to move
                     for (int c = 0; c < CarMx[origX][origY].size() && moveW > 0; c++)
                     {
-                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false)
+                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false && (CHARGE_IN_PLACE || CarMx[origX][origY][c].gas > getCarTrav(origX,origY,85)+8))
                         {
                             cn = c;
                             dist = findMoveDist(origX, origY, direct, lay + 1, maxTrav, CarMx,  zoneSize);
@@ -6819,7 +6820,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                     // find which car to move
                     for (int c = 0; c < CarMx[origX][origY].size() && moveS > 0; c++)
                     {
-                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false)
+                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false && (CHARGE_IN_PLACE || CarMx[origX][origY][c].gas > getCarTrav(origX,origY,85)+8))
                         {
                             cn = c;
                             dist = findMoveDist(origX, origY, direct, lay + 1, maxTrav, CarMx,  zoneSize);
@@ -6856,7 +6857,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                     // find which car to move
                     for (int c = 0; c < CarMx[origX][origY].size() && moveW > 0; c++)
                     {
-                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false)
+                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false && (CHARGE_IN_PLACE || CarMx[origX][origY][c].gas > getCarTrav(origX,origY,85)+8))
                         {
                             cn = c;
                             dist = findMoveDist(origX, origY, direct, lay + 1, maxTrav, CarMx,  zoneSize);
@@ -6893,7 +6894,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                     // find which car to move
                     for (int c = 0; c < CarMx[origX][origY].size() && moveN > 0; c++)
                     {
-                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false)
+                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false && (CHARGE_IN_PLACE || CarMx[origX][origY][c].gas > getCarTrav(origX,origY,85)+8))
                         {
                             cn = c;
                             dist = findMoveDist(origX, origY, direct, lay + 1, maxTrav, CarMx,  zoneSize);
@@ -6930,7 +6931,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
                     // find which car to move
                     for (int c = 0; c < CarMx[origX][origY].size() && moveE > 0; c++)
                     {
-                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false)
+                        if (CarMx[origX][origY][c].inUse == false && CarMx[origX][origY][c].moved == false && (CHARGE_IN_PLACE || CarMx[origX][origY][c].gas > getCarTrav(origX,origY,85)+8))
                         {
                             cn = c;
                             dist = findMoveDist(origX, origY, direct, lay + 1, maxTrav, CarMx,  zoneSize);
@@ -7014,7 +7015,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
             {
                 for (int c = 0; c < CarMx[x][y].size(); c++)
                 {
-                    if (CarMx[x][y][c].inUse == false && CarMx[x][y][c].moved == false)
+                    if (CarMx[x][y][c].inUse == false && CarMx[x][y][c].moved == false && (CHARGE_IN_PLACE || CarMx[x][y][c].gas > getCarTrav(x,y,85)+8))
                     {
                         nFreeCarsN = nFreeCarsN + 1;
                     }
@@ -7035,7 +7036,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
             {
                 for (int c = 0; c < CarMx[x][y].size(); c++)
                 {
-                    if (CarMx[x][y][c].inUse == false && CarMx[x][y][c].moved == false)
+                    if (CarMx[x][y][c].inUse == false && CarMx[x][y][c].moved == false && (CHARGE_IN_PLACE || CarMx[x][y][c].gas > getCarTrav(x,y,85)+8))
                     {
                         nFreeCarsS = nFreeCarsN + 1;
                     }
@@ -7056,7 +7057,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
             {
                 for (int c = 0; c < CarMx[x][y].size(); c++)
                 {
-                    if (CarMx[x][y][c].inUse == false && CarMx[x][y][c].moved == false)
+                    if (CarMx[x][y][c].inUse == false && CarMx[x][y][c].moved == false && (CHARGE_IN_PLACE || CarMx[x][y][c].gas > getCarTrav(x,y,85)+8))
                     {
                         nFreeCarsW = nFreeCarsN + 1;
                     }
@@ -7077,7 +7078,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
             {
                 for (int c = 0; c < CarMx[x][y].size(); c++)
                 {
-                    if (CarMx[x][y][c].inUse == false && CarMx[x][y][c].moved == false)
+                    if (CarMx[x][y][c].inUse == false && CarMx[x][y][c].moved == false && (CHARGE_IN_PLACE || CarMx[x][y][c].gas > getCarTrav(x,y,85)+8))
                     {
                         nFreeCarsE = nFreeCarsN + 1;
                     }
@@ -7225,7 +7226,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                             int iy = (ty + 1) * zoneSize + lay;
                             for (int c = 0; c < CarMx[ix][iy].size(); c++)
                             {
-                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false)
+                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false && (CHARGE_IN_PLACE || CarMx[ix][iy][c].gas > getCarTrav(ix,iy,85)+8))
                                 {
                                     cn = c;
                                     direct = 2; // direction = 2 (move the vehicle south)
@@ -7257,7 +7258,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                             int iy = ty * zoneSize - lay - 1;
                             for (int c = 0; c < CarMx[ix][iy].size(); c++)
                             {
-                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false)
+                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false && (CHARGE_IN_PLACE || CarMx[ix][iy][c].gas > getCarTrav(ix,iy,85)+8))
                                 {
                                     cn = c;
                                     direct = 1; // direction = 1 (move the vehicle north)
@@ -7289,7 +7290,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                             int ix = tx * zoneSize - lay - 1;
                             for (int c = 0; c < CarMx[ix][iy].size(); c++)
                             {
-                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false)
+                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false && (CHARGE_IN_PLACE || CarMx[ix][iy][c].gas > getCarTrav(ix,iy,85)+8))
                                 {
                                     cn = c;
                                     direct = 4; // direction = 4 (move the vehicle south)
@@ -7321,7 +7322,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                             int ix = (tx + 1) * zoneSize + lay;
                             for (int c = 0; c < CarMx[ix][iy].size(); c++)
                             {
-                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false)
+                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false && (CHARGE_IN_PLACE || CarMx[ix][iy][c].gas > getCarTrav(ix,iy,85)+8))
                                 {
                                     cn = c;
                                     direct = 3; // direction = 3 (move the vehicle west)
@@ -7366,7 +7367,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                             int iy = (ty + 1) * zoneSize + lay;
                             for (int c = 0; c < CarMx[ix][iy].size(); c++)
                             {
-                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false)
+                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false && (CHARGE_IN_PLACE || CarMx[ix][iy][c].gas > getCarTrav(ix,iy,85)+8))
                                 {
                                     cn = c;
                                     direct = 2; // direction = 2 (move the vehicle south)
@@ -7398,7 +7399,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                             int iy = ty * zoneSize - lay - 1;
                             for (int c = 0; c < CarMx[ix][iy].size(); c++)
                             {
-                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false)
+                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false && (CHARGE_IN_PLACE || CarMx[ix][iy][c].gas > getCarTrav(ix,iy,85)+8))
                                 {
                                     cn = c;
                                     direct = 1; // direction = 1 (move the vehicle north)
@@ -7430,7 +7431,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                             int ix = tx * zoneSize - lay - 1;
                             for (int c = 0; c < CarMx[ix][iy].size(); c++)
                             {
-                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false)
+                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false && (CHARGE_IN_PLACE || CarMx[ix][iy][c].gas > getCarTrav(ix,iy,85)+8))
                                 {
                                     cn = c;
                                     direct = 4; // direction = 4 (move the vehicle south)
@@ -7462,7 +7463,7 @@ void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLoo
                             int ix = (tx + 1) * zoneSize + lay;
                             for (int c = 0; c < CarMx[ix][iy].size(); c++)
                             {
-                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false)
+                                if (CarMx[ix][iy][c].inUse == false  && CarMx[ix][iy][c].moved == false && (CHARGE_IN_PLACE || CarMx[ix][iy][c].gas > getCarTrav(ix,iy,85)+8))
                                 {
                                     cn = c;
                                     direct = 3; // direction = 3 (move the vehicle west)
@@ -7567,7 +7568,7 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
     Car tCar = CarMx[ox][oy][c];
 
     bool needFuel = false;
-    if(tCar.refuel > 0)
+    if(tCar.needFuel)
 	needFuel = true;
 //    if(CHARGE_IN_PLACE && needFuel)
 //	cout << "Should not be moving in charge_in_place" << endl;
@@ -7613,7 +7614,7 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
             cout << "Arrived! Releasing car." << endl;
         }
 
-	if (tCar.refuel == 0)	
+	if (!tCar.needFuel)	
 	        tCar.inUse = false;
 	
         // generate a return trip, if slated
@@ -7628,6 +7629,7 @@ void move (std::vector<Car> CarMx[][yMax],  int ox, int oy, int dx, int dy, int 
         {
             tCar.refuel = refuelTime; // Changed to 48 from 2 (wait time is now 4 hours instead of 10 minutes)
             tCar.inUse = true;
+	    tCar.needFuel = true;
             tCar.destX = dx;
             tCar.destY = dy;
             tCar.pickupX = -1;
