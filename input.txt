@@ -1,9 +1,9 @@
-xMax=12
-yMax=12
-outerRate=10
-innerRate=30
-nearRate=27
-exurbanRate=2
+xMax=400
+yMax=400
+outerRate=105
+innerRate=1287
+nearRate=386
+exurbanRate=7
 maxTrav=11
 maxTravC=7
 reportProcs=0
