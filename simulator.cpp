@@ -198,8 +198,8 @@ vector<int> random_seeds;
     double personalTripProbability [personalTripSize];
     double personalTripVOTT [personalTripSize];
     double dwLookup [8][288];
-    double zoneSharesL [xMax][yMax]; // These are declared bigger than they need to be. 
-    double zoneSharesS [xMax][yMax]; // This allows only one function to be used for them
+    double zoneSharesL [numZonesL][numZonesL]; // These are declared bigger than they need to be. 
+    double zoneSharesS [numZonesS][numZonesS]; // This allows only one function to be used for them
 					// Two functions this is done for reallocVehsZonesL which could be changed only S zones
 					// Other is setZoneShares. This could be divided into two functions easily
 
@@ -266,7 +266,7 @@ void findDistWeight();
 
 void generateTrips (bool warmStart);
 void runSharedAV (int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxTrav, int maxTravC, double dwLookup [][288],
-                  double zoneSharesL[][yMax], double zoneSharesS [][yMax], double* maxCarUse, double* maxCarOcc, int& totDist, int& unoccDist, int& waitT, bool reportProcs,
+                  double zoneSharesL[][numZonesL], double zoneSharesS [][numZonesS], double* maxCarUse, double* maxCarOcc, int& totDist, int& unoccDist, int& waitT, bool reportProcs,
                   int saveRate, bool warmStart, bool lastWarm, long& maxAvailCars, bool& readFile, int startIter, int& unservedT, int* waitCount, int& hotStarts,
                   int& coldStarts, int nRuns,  int iter, bool checkStationDistance);
 void placeInitCars (std::vector<Car> CarMx[][yMax], int* timeTripCounts, double* maxCarUse, double* maxCarOcc, int& totDist,
@@ -305,7 +305,9 @@ double getWait(double dist);
 double getAccessTime(double dist);
 void writeTripsToFile();
 void setDwTimes (double dwLookup [][288]);
-void setZoneShares (double zoneShares[][yMax], double outerRate, double innerRate, double nearRate, double exurbanRate, int numZones, int zoneSize);
+void setZoneSharesS (double zoneShares[][numZonesS], double outerRate, double innerRate, double nearRate, double exurbanRate, int numZones, int zoneSize);
+void setZoneSharesL (double zoneShares[][numZonesL], double outerRate, double innerRate, double nearRate, double exurbanRate, int numZones, int zoneSize);
+
 
 void restoreStatus(int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxTrav,  double* maxCarUse, int& totDist,
                    int& unoccDist, bool reportProcs, int& saveRate, bool& warmStart, int& tCount, char fileName[], bool& error, bool& wStart, int& startIter);
@@ -344,8 +346,8 @@ void reallocVehs(int x, int y, std::vector<Car> CarMx[][yMax],  int* timeTripCou
 void reallocVehs2(int x, int y, std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLookup [][288],
                   bool reportProcs, int& totDist, int& unoccDist, int& hotStarts, int& coldStarts, int* cardDirect2, int& trackX, int& trackY, int& trackC, int iter);
 void reallocVehsLZones (std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLookup [][288],
-                        double zoneShares[][yMax], int t, bool reportProcs, int& totDist, int& unoccDist, int& hotStarts, int& coldStarts, int maxTrav,
-                        double netZoneBalance[][numZonesL], int* cardDirectLZ, int waitZonesT[][numZonesS], int numZones, int zoneSize, int& trackX, int& trackY, int& trackC, int iter);
+                        double zoneShares[][numZonesL], int t, bool reportProcs, int& totDist, int& unoccDist, int& hotStarts, int& coldStarts, int maxTrav,
+                        double netZoneBalance[][numZonesL], int* cardDirectLZ, int waitZonesT[][numZonesL], int numZones, int zoneSize, int& trackX, int& trackY, int& trackC, int iter);
 
 // function called from reallocVehs2, pushCars & pullCars
 double getSurroundCars (int x, int y, std::vector<Car> CarMx[][yMax]);
@@ -353,10 +355,10 @@ double findFreeCars (int x, int y, std::vector<Car> CarMx[][yMax]);
 
 // function called from reallocVehsLZones
 void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLookup [][288],
-              double zoneBalance[][yMax], int tx, int ty, double north, double south, double west, double east, int t, bool reportProcs, int& totDist,
+              double zoneBalance[][numZonesL], int tx, int ty, double north, double south, double west, double east, int t, bool reportProcs, int& totDist,
               int& unoccDist, int& hotStarts, int& coldStarts, int maxTrav, int* cardDirectLZ, int numZones, int zoneSize, int& trackX, int& trackY, int& trackC,int iter);
 void pullCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLookup [][288],
-              double zoneBalance[][yMax], int tx, int ty, double north, double south, double west, double east, int t, bool reportProcs, int& totDist,
+              double zoneBalance[][numZonesL], int tx, int ty, double north, double south, double west, double east, int t, bool reportProcs, int& totDist,
               int& unoccDist, int& hotStarts, int& coldStarts, int maxTrav, int* cardDirectLZ, int numZones, int zoneSize, int& trackX, int& trackY, int& trackC, int iter);
 double findMoveDist(int origX, int origY, int direct, int zoneEdge, int maxTrav, std::vector<Car> CarMx[][yMax],  int zoneSize);
 
@@ -769,7 +771,7 @@ void initVars (int runNum, bool warmStart, bool checkStationDistance)
     fclose(inputfile);
     if (runNum == 1)
     {
-	srand(rseed);
+	srand(1234);//rseed);
 	if (!warmStart){
 		random_seeds.clear();
 		for (int i = 0; i < numRuns; i++)
@@ -847,8 +849,8 @@ void initVars (int runNum, bool warmStart, bool checkStationDistance)
             }
         }
 	
-        setZoneShares (zoneSharesS, outerRate, innerRate, nearRate, exurbanRate, numZonesS, zoneSizeS);
-	setZoneShares (zoneSharesL, outerRate, innerRate, nearRate, exurbanRate, numZonesL, zoneSizeL);
+        setZoneSharesS (zoneSharesS, outerRate, innerRate, nearRate, exurbanRate, numZonesS, zoneSizeS);
+	setZoneSharesL (zoneSharesL, outerRate, innerRate, nearRate, exurbanRate, numZonesL, zoneSizeL);
         setStartTimes (startTimes);
         
 	if (SIZE == LARGE)
@@ -1158,8 +1160,8 @@ void getTripTravelMode(Trip* trip,double saev_wait,double tripdemand_b, double t
 	double vott_percent = 0.35; // 0.35
         double V_transit = -2.0 * VOTT * (t_ao + t_ad) - VOTT * (trip->tripDist * 4.0 / 100.0) - 2.0;
         double V_saev = -2.0 * VOTT * saev_wait - vott_percent * VOTT * (trip->tripDist * 4.0 / trav_speed) - saev_price * (trip->tripDist * 4.0);
-	if (!warmStart)
-		cout << tripdemand_b << " over " << tripdemand << " and " << carsupply << " over " << carsupply_b << " " << saev_multiplier <<endl;
+//	if (!warmStart)
+//		cout << tripdemand_b << " over " << tripdemand << " and " << carsupply << " over " << carsupply_b << " " << saev_multiplier <<endl;
         double prob_pv = exp(V_pv) / (exp(V_pv) + exp(V_transit) + exp(V_saev));
         double prob_tr = exp(V_transit) / (exp(V_pv) + exp(V_transit) + exp(V_saev));
 
@@ -1278,9 +1280,9 @@ double getAccessTime(double dist)
 
 //Runs the main thrust of the program - pairs all trips with vehicles and moves travelers from origin to destination
 void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxTrav, int maxTravC,  double dwLookup [][288],
-                  double zoneSharesL[][yMax], double zoneSharesS[][yMax], double* maxCarUse, double* maxCarOcc, int& totDist, int& unoccDist, int& waitT,
-                  bool reportProcs, int saveRate, bool warmStart, bool lastWarm, long& maxAvailCars, bool& readFile, int startIter, int& unservedT, int* waitCount,
-                  int& hotStarts, int& coldStarts, int nRuns, int iter, bool checkStationDistance)
+                  double zoneSharesL[][numZonesL], double zoneSharesS[][numZonesS], double* maxCarUse, double* maxCarOcc, int& totDist, int& unoccDist,
+ 		  int& waitT, bool reportProcs, int saveRate, bool warmStart, bool lastWarm, long& maxAvailCars, bool& readFile, int startIter, int& unservedT, 
+		  int* waitCount,  int& hotStarts, int& coldStarts, int nRuns, int iter, bool checkStationDistance)
 {
     Car nCar;
     int cn;
@@ -1495,7 +1497,8 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 		else
 			saev_ct ++;
 	}
-//	cout << "Time of day: " << t << "\nSAEV: " << saev_ct << "\nTransit: " << trans_ct << "\nPV: "<< pv_ct << endl;
+	if(!warmStart)
+		cout << "Time of day: " << t << "\nSAEV: " << saev_ct << "\nTransit: " << trans_ct << "\nPV: "<< pv_ct << endl;
 /*	for (int w = 5; w >=0; w--){
 		for (int i=0; i<waitList[w].size(); i++){
 			getTripTravelMode(waitList[w][i].waitPtr,(w+1)*5 + 2.5);
@@ -1703,14 +1706,14 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
                         cout << "Time " << waitList[waitListI[0]][0].startTime << " start " << waitList[waitListI[0]][0].startX << "," << waitList[waitListI[0]][0].startY << endl;
                     }
 
-                    waitZonesTL[TTMx[t][trp].startX / zoneSizeL][TTMx[t][trp].startY / zoneSizeL]++;
-                    waitZonesTS[TTMx[t][trp].startX / zoneSizeS][TTMx[t][trp].startY / zoneSizeS]++;
 	                double tripdemand_b = tripDemand[TTMx[t][trp].startX/zoneSizeL][TTMx[t][trp].startY/zoneSizeL];
         	        double carsupply_b = carsAvailable[TTMx[t][trp].startX/zoneSizeL][TTMx[t][trp].startY/zoneSizeL];
 
 			getTripTravelMode(&TTMx[t][trp],7.5/60.0,tripdemand_b, numTrips, carsupply_b, (double)prev_avail_cars,warmStart);
 			if (TTMx[t][trp].modeOfTransit == 2){
-                		TTMx[t][trp].waitTime = 5;
+                                waitZonesTL[TTMx[t][trp].startX / zoneSizeL][TTMx[t][trp].startY / zoneSizeL]++;
+	                        waitZonesTS[TTMx[t][trp].startX / zoneSizeS][TTMx[t][trp].startY / zoneSizeS]++;
+		    		TTMx[t][trp].waitTime = 5;
 				waitList[0].push_back(TTMx[t][trp]);
 	        		waitList[0][waitListI[0]].waitPtr = &TTMx[t][trp];
 	                	waitListI[0]++;
@@ -1904,8 +1907,8 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 
 //  cout << "realloc" << endl;
 
-        reallocVehsLZones (CarMx,   timeTripCounts, dwLookup, zoneSharesS, t, reportProcs, totDist, unoccDist, hotStarts, coldStarts, trav,
-                           netZoneBalance, cardDirectLZ, waitZonesTS, numZonesS, zoneSizeS, trackX, trackY, trackC,iter);
+        reallocVehsLZones (CarMx,   timeTripCounts, dwLookup, zoneSharesL, t, reportProcs, totDist, unoccDist, hotStarts, coldStarts, trav,
+                           netZoneBalance, cardDirectLZ, waitZonesTL, numZonesL, zoneSizeL, trackX, trackY, trackC,iter);
 
         randOrdering(xRandOrd, xMax);
         randOrdering(yRandOrd, yMax);
@@ -7647,57 +7650,80 @@ void setDwTimes (double dwLookup [][288])
 }
 
 // sets shares of total trips that should originiate in each block
-void setZoneShares (double zoneShares[][yMax], double outerRate, double nearRate, double innerRate, double exurbanRate, int numZones, int zoneSize)
+void setZoneSharesS (double zoneShares[][numZonesS], double outerRate, double nearRate, double innerRate, double exurbanRate, int numZones, int zoneSize)
 {
     int xz, yz;
     double r;
     double newTrips;
     double totTrips = 0;
-
     r = sqrt (pow(double (xMax - 1) / 2,2) + pow(double (yMax - 1) / 2,2));  //radius from the city center
-
-    for (xz = 0; xz < numZones; xz++)
-    {
-        for (yz = 0; yz < numZones; yz++)
-        {
+    for (xz = 0; xz < numZones; xz++){
+        for (yz = 0; yz < numZones; yz++){
             zoneShares[xz][yz] = 0;
         }
     }
-
     // get total trips
-    for (int x = 0; x < xMax; x++)
-    {
+    for (int x = 0; x < xMax; x++){
         xz = x / zoneSize;
-        for (int y = 0; y < yMax; y++)
-        {
+        for (int y = 0; y < yMax; y++){
             yz = y / zoneSize;
             newTrips = getRate (x, y, r, double(xMax - 1) / 2, double(yMax - 1) / 2, outerRate, innerRate, nearRate, exurbanRate);
             zoneShares[xz][yz] = zoneShares[xz][yz] + newTrips;
             totTrips = totTrips + newTrips;
         }
     }
-
     // normalize to sum of trips = 1
-    for (int xz = 0; xz < numZones; xz++)
-    {
-        for (int yz = 0; yz < numZones; yz++)
-        {
+    for (int xz = 0; xz < numZones; xz++){
+        for (int yz = 0; yz < numZones; yz++){
             zoneShares[xz][yz] = zoneShares[xz][yz] / totTrips;
         }
     }
-
-    if (0)
-    {
-        for (int yz = numZones - 1; yz >= 0; yz--)
-        {
-            for (int xz = 0; xz < numZones; xz++)
-            {
+    if (0){
+        for (int yz = numZones - 1; yz >= 0; yz--){
+            for (int xz = 0; xz < numZones; xz++){
                 cout << int (1000 * zoneShares[xz][yz]) << " ";
             }
             cout << endl;
         }
     }
-
+    return;
+}
+void setZoneSharesL (double zoneShares[][numZonesL], double outerRate, double nearRate, double innerRate, double exurbanRate, int numZones, int zoneSize)
+{
+    int xz, yz;
+    double r;
+    double newTrips;
+    double totTrips = 0;
+    r = sqrt (pow(double (xMax - 1) / 2,2) + pow(double (yMax - 1) / 2,2));  //radius from the city center
+    for (xz = 0; xz < numZones; xz++){
+        for (yz = 0; yz < numZones; yz++){
+            zoneShares[xz][yz] = 0;
+        }
+    }
+    // get total trips
+    for (int x = 0; x < xMax; x++){
+        xz = x / zoneSize;
+        for (int y = 0; y < yMax; y++){
+            yz = y / zoneSize;
+            newTrips = getRate (x, y, r, double(xMax - 1) / 2, double(yMax - 1) / 2, outerRate, innerRate, nearRate, exurbanRate);
+            zoneShares[xz][yz] = zoneShares[xz][yz] + newTrips;
+            totTrips = totTrips + newTrips;
+        }
+    }
+    // normalize to sum of trips = 1
+    for (int xz = 0; xz < numZones; xz++){
+        for (int yz = 0; yz < numZones; yz++){
+            zoneShares[xz][yz] = zoneShares[xz][yz] / totTrips;
+        }
+    }
+    if (0){
+        for (int yz = numZones - 1; yz >= 0; yz--){
+            for (int xz = 0; xz < numZones; xz++){
+                cout << int (1000 * zoneShares[xz][yz]) << " ";
+            }
+            cout << endl;
+        }
+    }
     return;
 }
 
@@ -9250,8 +9276,8 @@ void reallocVehs2(int x, int y, std::vector<Car> CarMx[][yMax],  int* timeTripCo
 
 // reallocates vehicles between zones. Excess cars -> positive zoneBalance, excess trips -> negative zoneBalance.
 void reallocVehsLZones (std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLookup [][288],
-                        double zoneShares[][yMax], int t, bool reportProcs, int& totDist, int& unoccDist, int& hotStarts, int& coldStarts, int maxTrav,
-                        double netZoneBalance[][numZonesL], int* cardDirectLZ, int waitZonesT[][numZonesS], int numZones, int zoneSize, int& trackX, int& trackY, int& trackC, int iter)
+                        double zoneShares[][numZonesL], int t, bool reportProcs, int& totDist, int& unoccDist, int& hotStarts, int& coldStarts, int maxTrav,
+                        double netZoneBalance[][numZonesL], int* cardDirectLZ, int waitZonesT[][numZonesL], int numZones, int zoneSize, int& trackX, int& trackY, int& trackC, int iter)
 {
     int xb, yb;
     int tx = 0;
@@ -9264,10 +9290,10 @@ void reallocVehsLZones (std::vector<Car> CarMx[][yMax],  int* timeTripCounts, do
     int carCt = 0;
     double tb = 0;
     bool findNextZone = true;
-    double zoneBalance[xMax][yMax];
-    bool ablePush[xMax][yMax];
-    bool ablePull[xMax][yMax];
-
+    double zoneBalance[numZonesL][numZonesL];
+    bool ablePush[numZonesL][numZonesL];
+    bool ablePull[numZonesL][numZonesL];
+    
     // initialize zoneBalance
     for (xb = 0; xb < numZones; xb++)
     {
@@ -9694,7 +9720,7 @@ double findFreeCars (int x, int y, std::vector<Car> CarMx[][yMax])
 
 // balances cars in zone tx, ty by pushing excess cars to adjacent zone areas
 void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLookup [][288],
-              double zoneBalance[][xMax], int tx, int ty, double north, double south, double west, double east, int t, bool reportProcs, int& totDist,
+              double zoneBalance[][numZonesL], int tx, int ty, double north, double south, double west, double east, int t, bool reportProcs, int& totDist,
               int& unoccDist, int& hotStarts, int& coldStarts, int maxTrav, int* cardDirectLZ, int numZones, int zoneSize, int& trackX, int& trackY, int& trackC, int iter)
 {
     int moveN = 0;
@@ -10150,7 +10176,7 @@ void pushCars(std::vector<Car> CarMx[][yMax], int* timeTripCounts, double dwLook
 
 // balances cars in zone tx, ty by pulling excess cars from adjacent zone areas
 void pullCars(std::vector<Car> CarMx[][yMax],  int* timeTripCounts, double dwLookup [][288],
-              double zoneBalance[][yMax], int tx, int ty, double north, double south, double west, double east, int t, bool reportProcs, int& totDist,
+              double zoneBalance[][numZonesL], int tx, int ty, double north, double south, double west, double east, int t, bool reportProcs, int& totDist,
               int& unoccDist, int& hotStarts, int& coldStarts, int maxTrav, int* cardDirectLZ, int numZones, int zoneSize, int& trackX, int& trackY, int& trackC,int iter)
 {
     int pullN = 0;
