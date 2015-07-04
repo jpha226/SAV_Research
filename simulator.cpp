@@ -159,8 +159,8 @@ const int businessTripSize = 926;
 
 const int zoneSizeL = xMax / numZonesL; // 8
 const int zoneSizeS = xMax / numZonesS; // 4
-const int maxNumRuns = 65;
-const int numWarmRuns = 1;//20;//20; // 20
+const int maxNumRuns = 51;
+const int numWarmRuns = 20;//20;//20; // 20
 
 #if SIMULATOR == SAV
 const int carRange = 1600; //1600;//320;
@@ -512,7 +512,7 @@ tot1 = clock();
 				nStations = nStations + ChStMx[x][y].size();
             		}
         	}
-
+		cout << "Just generated: " <<nCars << endl;
     	}
 
     	cout << "nCars is " << nCars << endl;
@@ -1159,7 +1159,7 @@ void getTripTravelMode(Trip* trip,double saev_wait,double tripdemand_b, double t
         double V_transit = -2.0 * VOTT * (t_ao + t_ad) - VOTT * (trip->tripDist * 4.0 / 100.0) - 2.0;
         double V_saev = -2.0 * VOTT * saev_wait - vott_percent * VOTT * (trip->tripDist * 4.0 / trav_speed) - saev_price * (trip->tripDist * 4.0);
 	if (!warmStart)
-		cout << tripdemand_b << " over " << tripdemand << " and " << carsupply << " over " << carsupply_b << endl;
+		cout << tripdemand_b << " over " << tripdemand << " and " << carsupply << " over " << carsupply_b << " " << saev_multiplier <<endl;
         double prob_pv = exp(V_pv) / (exp(V_pv) + exp(V_transit) + exp(V_saev));
         double prob_tr = exp(V_transit) / (exp(V_pv) + exp(V_transit) + exp(V_saev));
 
@@ -1480,12 +1480,22 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 
 
 	// Determine travel mode
+	int saev_ct = 0;
+	int trans_ct = 0;
+	int pv_ct = 0;
 	for (int trp = 0; trp < TTMx[t].size(); trp++)
 	{
 		double tripdemand_b = tripDemand[TTMx[t][trp].startX/zoneSizeL][TTMx[t][trp].startY/zoneSizeL];
 		double carsupply_b = carsAvailable[TTMx[t][trp].startX/zoneSizeL][TTMx[t][trp].startY/zoneSizeL];
 		getTripTravelMode(&TTMx[t][trp],2.5/60.0,tripdemand_b, numTrips, carsupply_b, (double)prev_avail_cars, warmStart);
+		if (TTMx[t][trp].modeOfTransit == 0)
+			trans_ct ++;
+		else if (TTMx[t][trp].modeOfTransit == 1)
+			pv_ct ++;
+		else
+			saev_ct ++;
 	}
+//	cout << "Time of day: " << t << "\nSAEV: " << saev_ct << "\nTransit: " << trans_ct << "\nPV: "<< pv_ct << endl;
 /*	for (int w = 5; w >=0; w--){
 		for (int i=0; i<waitList[w].size(); i++){
 			getTripTravelMode(waitList[w][i].waitPtr,(w+1)*5 + 2.5);
