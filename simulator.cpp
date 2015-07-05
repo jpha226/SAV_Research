@@ -85,6 +85,7 @@ struct Trip
     double tripDist;
     bool isBusiness;
     int modeOfTransit;
+    double price;
     double VOTT;
     double V_pv;
     double V_tr;
@@ -1160,6 +1161,7 @@ void getTripTravelMode(Trip* trip,double saev_wait,double tripdemand_b, double t
 	double vott_percent = 0.35; // 0.35
         double V_transit = -2.0 * VOTT * (t_ao + t_ad) - VOTT * (trip->tripDist * 4.0 / 100.0) - 2.0;
         double V_saev = -2.0 * VOTT * saev_wait - vott_percent * VOTT * (trip->tripDist * 4.0 / trav_speed) - saev_price * (trip->tripDist * 4.0);
+	
 //	if (!warmStart)
 //		cout << tripdemand_b << " over " << tripdemand << " and " << carsupply << " over " << carsupply_b << " " << saev_multiplier <<endl;
         double prob_pv = exp(V_pv) / (exp(V_pv) + exp(V_transit) + exp(V_saev));
