@@ -89,8 +89,10 @@ struct Trip
     double VOTT;
     double V_pv;
     double V_tr;
-    double a_o;
-    double a_d;
+    double sb;
+    double sB;
+    double db;
+    double dB;
     Trip* waitPtr;
 };
 
@@ -1151,10 +1153,12 @@ void getTripTravelMode(Trip* trip,double saev_wait,double tripdemand_b, double t
         t_ao = getAccessTime(distToCenOrigin);
         t_ad = getAccessTime(distToCenDest);
         double wait = getWait(distToCenOrigin);
-        trip->a_o = t_ao;
-        trip->a_d = t_ad;
 	double saev_price = 0.85 / 4;//0.2125;
-	double saev_multiplier = 1;//(tripdemand_b / tripdemand) * (carsupply / carsupply_b);
+	double saev_multiplier = (tripdemand_b / tripdemand) * (carsupply / carsupply_b);
+        trip->sb = carsupply_b;
+	trip->sB = carsupply;
+	trip->db = tripdemand;
+	trip->dB = tripdemand_b;
 	int chargeDistance = 0;
 	if (!warmStart){
 		saev_price *= saev_multiplier;
@@ -1163,7 +1167,7 @@ void getTripTravelMode(Trip* trip,double saev_wait,double tripdemand_b, double t
 	double vott_percent = 0.25; // 0.35
         double V_transit = -2.0 * VOTT * (t_ao + t_ad) - VOTT * (trip->tripDist * 4.0 / 100.0) - 2.0;
         double V_saev = -2.0 * VOTT * saev_wait - vott_percent * VOTT * (trip->tripDist * 4.0 / trav_speed) - saev_price * (trip->tripDist * 4.0 + chargeDistance);
-
+	trip->price = saev_price * (trip->tripDist*4.0 + chargeDistance);
         double prob_pv = exp(V_pv) / (exp(V_pv) + exp(V_transit) + exp(V_saev));
         double prob_tr = exp(V_transit) / (exp(V_pv) + exp(V_transit) + exp(V_saev));
 
@@ -1194,14 +1198,14 @@ void writeTripsToFile()
 		return;
 	done = true;
 	ofstream outfile;
-	outfile.open("modeChoiceStats_charging_pricing.csv");
+	outfile.open("modeChoiceStats_supply_charge.csv");
 	int i = 0;
 	for(int t=0; t<288; t++)
 	{
 		cout << TTMx[t].size() << endl;
 		for (int trp=0; trp<TTMx[t].size(); trp++)
 		{
-			if (i % 100 == 0){
+			if (i % 500 == 0){
 				Trip trip = TTMx[t][trp];
 				if(trip.isBusiness)
 					outfile << "Business,";
@@ -1221,8 +1225,10 @@ void writeTripsToFile()
 				outfile << trip.tripDist * 4.0 << ",";
 				outfile << "PV Util: "<< trip.V_pv<<",";
 				outfile << "Trans Util: "<<trip.V_tr<<",";
-				outfile << "Accss Orgn: " << trip.a_o<<",";
-				outfile << "Accss Dest: " << trip.a_d<<",";
+				outfile << "supplyb: " << trip.sb<<",";
+				outfile << "supplyB: "<< trip.sB<<",";
+				outfile << "demandb: " << trip.db <<",";
+				outfile << "demandB: " << trip.dB <<",";
 				if (trip.modeOfTransit == 0)
 					outfile << "Public Transit"<<endl;
 				else if (trip.modeOfTransit == 1)
@@ -8508,16 +8514,7 @@ void assignCar (int x, int y, int c, std::vector<Car> CarMx[][yMax], Trip* trp)
     CarMx[x][y][c].destY = trp->endY;
     CarMx[x][y][c].tripCt ++;    
 
-    double saev_price = 0.85 / 4;//0.2125;
-    double saev_multiplier = 1;//(tripdemand_b / tripdemand) * (carsupply / carsupply_b);
-    int chargeDistance = 0;
-//    if (!warmStart){
-    saev_price *= saev_multiplier;
-    chargeDistance = nearestStationDistance(trp->endX,trp->endY); // in grid cells. Trip distance is in miles so multiply by 4.
-//    }
-
-
-    revenue += (abs(trp->endX - trp->startX) + abs(trp->endY - trp->startY) + chargeDistance) * saev_price;
+    revenue += trp->price;
 
     if (trp->waitPtr != NULL){
       CarMx[x][y][c].currTrip = trp->waitPtr;
