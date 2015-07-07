@@ -61,6 +61,9 @@ Outputs: This program outputs the number of shared AVs needed (N) to serve T tri
 #define SIMULATOR SAEV // Sets car ranges and fuel times for either electric or gas vehicles
 #define WAIT SEPARATE // Refers to giving all unmatched trip equal priority or separate
 #define CHARGE_IN_PLACE false
+#define SUPPLY_PRICING true
+#define CHARGE_PRICING true
+#define REALLOCATION_ON true
 
 /****
 * The original simulator can be run by defining SIZE as SMALL, ALGORITHM as GREEDY, and SIMULATOR as SAV and WAIT as SEPARATE.
@@ -139,6 +142,9 @@ const int yMax = xMax; // 40
 const int TTMxSize = 4000;
 const int CarMxSize = 500;
 const int WaitListSize = 4000;
+const double base_price = 0.85 / 4;
+const double saev_vott = 0.35;
+const char* mode_output = "modeChoiceStats_supply_charge.csv";
 
 #if SIZE == LARGE
 const int numZonesL = 50;
@@ -1153,21 +1159,29 @@ void getTripTravelMode(Trip* trip,double saev_wait,double tripdemand_b, double t
         t_ao = getAccessTime(distToCenOrigin);
         t_ad = getAccessTime(distToCenDest);
         double wait = getWait(distToCenOrigin);
-	double saev_price = 0.85 / 4;//0.2125;
+	double saev_price = base_price;//0.2125;
 	double saev_multiplier = (tripdemand_b / tripdemand) * (carsupply / carsupply_b);
+	if (saev_multiplier > 10.0)
+	  saev_multiplier = 2.0;
+	else if (saev_multiplier < 0.1)
+	  saev_multiplier = 0.5;
+	else
+	  saev_multiplier = 1.0;
         trip->sb = carsupply_b;
 	trip->sB = carsupply;
-	trip->db = tripdemand;
-	trip->dB = tripdemand_b;
+	trip->db = tripdemand_b;
+	trip->dB = tripdemand;
 	int chargeDistance = 0;
 	if (!warmStart){
-		saev_price *= saev_multiplier;
-	        chargeDistance = nearestStationDistance(trip->endX,trip->endY); // in grid cells. Trip distance is in miles so multiply by 4.
+		if (SUPPLY_PRICING)
+		  saev_price *= saev_multiplier;
+		if (CHARGE_PRICING)
+	          chargeDistance = nearestStationDistance(trip->endX,trip->endY); // in grid cells. Trip distance is in miles so multiply by 4.
 	}
-	double vott_percent = 0.25; // 0.35
+
         double V_transit = -2.0 * VOTT * (t_ao + t_ad) - VOTT * (trip->tripDist * 4.0 / 100.0) - 2.0;
-        double V_saev = -2.0 * VOTT * saev_wait - vott_percent * VOTT * (trip->tripDist * 4.0 / trav_speed) - saev_price * (trip->tripDist * 4.0 + chargeDistance);
 	trip->price = saev_price * (trip->tripDist*4.0 + chargeDistance);
+        double V_saev = -2.0 * VOTT * saev_wait - saev_vott * VOTT * (trip->tripDist * 4.0 / trav_speed) - trip->price;
         double prob_pv = exp(V_pv) / (exp(V_pv) + exp(V_transit) + exp(V_saev));
         double prob_tr = exp(V_transit) / (exp(V_pv) + exp(V_transit) + exp(V_saev));
 
@@ -1198,7 +1212,7 @@ void writeTripsToFile()
 		return;
 	done = true;
 	ofstream outfile;
-	outfile.open("modeChoiceStats_supply_charge.csv");
+	outfile.open(mode_output);//"modeChoiceStats_supply_pricing.csv");
 	int i = 0;
 	for(int t=0; t<288; t++)
 	{
@@ -1914,35 +1928,38 @@ void runSharedAV ( int* timeTripCounts, std::vector<Car> CarMx[][yMax], int maxT
 // reallocate vehicles based on zones
 
 //  cout << "realloc" << endl;
+	if (REALLOCATION_ON){
 
-        reallocVehsLZones (CarMx,   timeTripCounts, dwLookup, zoneSharesL, t, reportProcs, totDist, unoccDist, hotStarts, coldStarts, trav,
+          reallocVehsLZones (CarMx,   timeTripCounts, dwLookup, zoneSharesL, t, reportProcs, totDist, unoccDist, hotStarts, coldStarts, trav,
                            netZoneBalance, cardDirectLZ, waitZonesTL, numZonesL, zoneSizeL, trackX, trackY, trackC,iter);
 
-        randOrdering(xRandOrd, xMax);
-        randOrdering(yRandOrd, yMax);
+          randOrdering(xRandOrd, xMax);
+          randOrdering(yRandOrd, yMax);
 
-        // shift vehicles two spaces, if current space has 3 or my vehicles and nearby space is unoccupied with no neighbors
-        for (int x = 0; x < xMax; x++)
-        {
+          // shift vehicles two spaces, if current space has 3 or my vehicles and nearby space is unoccupied with no neighbors
+          for (int x = 0; x < xMax; x++)
+          {
             for (int y = 0; y < yMax; y++)
             {
                 reallocVehs2(xRandOrd[x], yRandOrd[y], CarMx,   timeTripCounts, dwLookup, reportProcs, totDist, unoccDist, hotStarts, coldStarts,
                              cardDirect2, trackX, trackY, trackC, iter);
             }
-        }
+          }
 
-        randOrdering(xRandOrd, xMax);
-        randOrdering(yRandOrd, yMax);
+          randOrdering(xRandOrd, xMax);
+          randOrdering(yRandOrd, yMax);
 
-        // shift vehicles one space if difference between current space and new space is more than 2
-        for (int x = 0; x < xMax; x++)
-        {
-            for (int y = 0; y < yMax; y++)
-            {
-                reallocVehs(xRandOrd[x], yRandOrd[y], CarMx,   timeTripCounts, dwLookup, reportProcs, totDist, unoccDist, hotStarts, coldStarts,
+          // shift vehicles one space if difference between current space and new space is more than 2
+          for (int x = 0; x < xMax; x++)
+          {
+              for (int y = 0; y < yMax; y++)
+              {
+                  reallocVehs(xRandOrd[x], yRandOrd[y], CarMx,   timeTripCounts, dwLookup, reportProcs, totDist, unoccDist, hotStarts, coldStarts,
                             cardDirect, trackX, trackY, trackC, iter);
-            }
-        }
+              }
+          }
+
+	}
 
         tempMinUnused = 0;
 
