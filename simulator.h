@@ -167,6 +167,7 @@ class Simulator{
 		int rseed;
 		char* readName;
 		vector<int> random_seeds;
+		float cellSize;
 
 		long totDistRun;
 		long totUnoccDistRun;
@@ -305,7 +306,7 @@ class Simulator{
 		Simulator(int xDim, int yDim);
 		~Simulator();
 
-		void loadParameters(const char* input);
+		void loadParameters(char* input);
                 void printParameters();
 		void loadTripRateData(char* rateData, char* cellMap);
 		void initVars (int runNum, bool warmStart, bool checkStationDistance);

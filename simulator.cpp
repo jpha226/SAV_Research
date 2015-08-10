@@ -80,6 +80,7 @@ using namespace std;
 // Begin Program **************************************************************************************************
 Simulator::Simulator(int xDim, int yDim)
 {
+	cout<<"Constructor!"<<endl;
 	// Grid variables
 	xMax = xDim;
 	yMax = yDim;
@@ -101,13 +102,16 @@ Simulator::Simulator(int xDim, int yDim)
 	refuelDist = 0;
 	rejectLimit = 1000000;
 	rangePercentToRefuel = 1.0;
+	cellSize=0.25;
 
 	// Pricing variables
-	base_price = 0.85 / 4;
+	base_price = 0.85 * cellSize;
 	saev_vott = 0.35;
-
-	string inputFile = "input.txt";
-        loadParameters(inputFile.c_str());	
+	cout << "load params"<<endl;
+//	string inputFile = "input.txt";
+        loadParameters("input.txt");
+	cout << "Done load"<<endl;
+	base_price += cellSize;
 	cout << xMax << " " << yMax << endl;
 	// Initialize grid structures for the map
 	CarMx = new vector<Car>*[xMax];
@@ -134,7 +138,8 @@ Simulator::Simulator(int xDim, int yDim)
 
 
 	setTripDist();
-	
+	loadTripRateData("AustinTripRates.csv","AustinCellMap.csv");	
+	cout << "Done!"<<endl;
 }
 
 Simulator::Simulator(){ Simulator(40,40);}
@@ -182,7 +187,7 @@ void Simulator::runSimulation()
 		maxAvailStations = 0;
 		int iter = 1;
 		cout << abs(prevMaxAvailStations - maxAvailStations)/(1.0*prevMaxAvailStations) << endl;
-		while ((abs(prevMaxAvailStations - maxAvailStations)/(1.0*prevMaxAvailStations) > 0.01) && iter < 100){
+		while ((abs(prevMaxAvailStations - maxAvailStations)/(1.0*prevMaxAvailStations) > 0.01) && iter < 100 || iter < 5){
 
 			prevMaxAvailStations = maxAvailStations;
 		        initVars(iter, true, false);
@@ -303,7 +308,7 @@ void Simulator::runSimulation()
 		if (matchAlgorithm == SCRAM)
 		        reportMatchingResults();
 		else{
-			printParameters();
+			//printParameters();
 			reportResults (i);// timeTripCounts,  maxCarUse, maxCarOcc, totDist, unoccDist, waitT, unservedT, waitCount, hotStarts, coldStarts,
                        // totDistRun, totUnoccDistRun, totCarsRun, totTripsRun, totHSRun, totCSRun, totWaitTRun, totUnservedTRun, totWaitCountRun,
                        // totUnusedRun, totUnoccRun, totAvgWait, totAvgTripDist, numRuns, i); 
@@ -513,6 +518,7 @@ void Simulator::initVars (int runNum, bool warmStart, bool checkStationDistance)
 */
     if (runNum == 1)
     {
+	cout <<"Seed"<<endl;
 	srand(rseed);
 	if (!warmStart){
 		random_seeds.clear();
@@ -623,7 +629,7 @@ void Simulator::initVars (int runNum, bool warmStart, bool checkStationDistance)
     return;
 }
 
-void Simulator::loadParameters(const char* input)
+void Simulator::loadParameters(char* input)
 {
 
    FILE* inputfile;
@@ -708,7 +714,6 @@ void Simulator::loadParameters(const char* input)
             } else if (strcmp (varStr, "rideBasePrice") == 0) {
                 inputVal = strtod(valStr, NULL);
                 rideBasePrice = (double) inputVal;
-		cout << "RBP: " << rideBasePrice << endl;
             } else if (strcmp (varStr, "matchAlgorithm") == 0) {
                 inputVal = strtod(valStr, NULL);
                 matchAlgorithm = (int) inputVal;
@@ -750,10 +755,12 @@ void Simulator::loadParameters(const char* input)
                 rangePercentToRefuel = (double) inputVal;
             } else if (strcmp (varStr, "tripDistDistributionFile") == 0) {
                 strcpy(tripDistDistributionFile, valStr);
-            }
-            else if (strcmp (varStr, "useCityTripData") == 0) {
+            } else if (strcmp (varStr, "useCityTripData") == 0) {
                 inputVal = strtod(valStr, NULL);
                 useCityTripData = (bool) inputVal;
+            } else if (strcmp (varStr, "cellSize") == 0) {
+                inputVal = strtod(valStr, NULL);
+                cellSize = (float) inputVal;
             }
 
         }
@@ -996,7 +1003,7 @@ int redrawnCt = 0;
 		if (warmStart&&!warmStart){
 			bool redrawn = false;
 	
-			while ( abs(*itx - newX) + abs(*ity - newY) > 50 * 4)
+			while ( abs(*itx - newX) + abs(*ity - newY) > 50 * (1.0/cellSize))
 			{
 				if(redrawn)
 					redrawnCt ++;
@@ -1023,7 +1030,7 @@ int redrawnCt = 0;
                 nTrip.returnHome = false;
                 nTrip.waitTime = 0;
                 nTrip.tripDist = (abs(nTrip.startY - nTrip.endY) + abs(nTrip.startX - nTrip.endX));
-                nTrip.tripDist = nTrip.tripDist / 4;
+                nTrip.tripDist = nTrip.tripDist / (1.0/cellSize);
                 nTrip.waitPtr = NULL;
 		nTrip.price = 0.0;
 		//double saev_wait = 2.5;
@@ -1125,7 +1132,7 @@ void Simulator::generateTripsWithData(bool warmStart)
           nTrip.returnHome = false;
           nTrip.waitTime = 0;
           nTrip.tripDist = (abs(nTrip.startY - nTrip.endY) + abs(nTrip.startX - nTrip.endX));
-          nTrip.tripDist = nTrip.tripDist / 4; // convert to miles
+          nTrip.tripDist = nTrip.tripDist / (1.0/cellSize); // convert to miles
           nTrip.waitPtr = NULL;
           nTrip.price = 0.0;
 
@@ -1158,7 +1165,7 @@ void Simulator::getTripTravelMode(Trip* trip,double saev_wait,double tripdemand_
 	double trav_speed = 133.0;
 	if (((time >= 84) && (time <= 96)) || ((time >= 192) && (time <= 222)))
 		trav_speed = 123.0;
-	double V_pv = -1 * VOTT * (trip->tripDist * 4.0 / trav_speed) - 0.152 * (trip->tripDist * 4.0);
+	double V_pv = -1 * VOTT * (trip->tripDist * (1.0/cellSize) / trav_speed) - 0.152 * (trip->tripDist * (1.0/cellSize));
 	if (!trip->isBusiness)
 	{
 		double distToCen = sqrt (pow((trip->endX - xMax/2),2) + pow((trip->endY - yMax/2),2));
@@ -1194,9 +1201,9 @@ void Simulator::getTripTravelMode(Trip* trip,double saev_wait,double tripdemand_
 	          chargeDistance = nearestStationDistance(trip->endX,trip->endY); // in grid cells. Trip distance is in miles so multiply by 4.
 	}
 
-        double V_transit = -2.0 * VOTT * (t_ao + t_ad) - VOTT * (trip->tripDist * 4.0 / 100.0) - 2.0;
-	trip->price = saev_price * (trip->tripDist*4.0 + chargeDistance);
-        double V_saev = -2.0 * VOTT * saev_wait - saev_vott * VOTT * (trip->tripDist * 4.0 / trav_speed) - trip->price;
+        double V_transit = -2.0 * VOTT * (t_ao + t_ad) - VOTT * (trip->tripDist * (1.0/cellSize) / 100.0) - 2.0;
+	trip->price = saev_price * (trip->tripDist*(1.0/cellSize) + chargeDistance);
+        double V_saev = -2.0 * VOTT * saev_wait - saev_vott * VOTT * (trip->tripDist * (1.0/cellSize) / trav_speed) - trip->price;
         double prob_pv = exp(V_pv) / (exp(V_pv) + exp(V_transit) + exp(V_saev));
         double prob_tr = exp(V_transit) / (exp(V_pv) + exp(V_transit) + exp(V_saev));
 
@@ -1231,7 +1238,7 @@ void Simulator::writeTripsToFile()
 	int i = 0;
 	for(int t=0; t<288; t++)
 	{
-		cout << TTMx[t].size() << endl;
+		//cout << TTMx[t].size() << endl;
 		for (int trp=0; trp<TTMx[t].size(); trp++)
 		{
 			if (i % 500 == 0){
@@ -1251,7 +1258,7 @@ void Simulator::writeTripsToFile()
 				outfile << distToCenOrigin<<",";
 				outfile << distToCenDest << ",";
 				outfile << trip.VOTT<<",";
-				outfile << trip.tripDist * 4.0 << ",";
+				outfile << trip.tripDist * (1.0/cellSize) << ",";
 				outfile << "PV Util: "<< trip.V_pv<<",";
 				outfile << "Trans Util: "<<trip.V_tr<<",";
 				outfile << "supplyb: " << trip.sb<<",";
@@ -1440,7 +1447,7 @@ void Simulator::runSharedAV (bool warmStart, bool lastWarm, int iter, bool check
     for (t = startT; t < 288; t++)
     {
 //	if (!warmStart)
-//	cout << "Time of day: "<<t<<" " <<endl;	
+//	  cout << "Time of day: "<<t<<" " <<endl;	
         carCt = 0;
         for (int xc = 0; xc < xMax; xc++)
         {
@@ -1823,7 +1830,7 @@ void Simulator::runSharedAV (bool warmStart, bool lastWarm, int iter, bool check
 //        {
 //            reportProcs = false;
 //        }
-	if (! canRefuelAnywhere){
+	if (!canRefuelAnywhere){
 //		cout << "Assign refuel" << endl;
 		// Assign cars that need to refuel to a charging station
 		for (int x =0; x<xMax; x++)
@@ -2431,10 +2438,10 @@ void Simulator::reportResults (int runNum)//int* timeTripCounts, double* maxCarU
 //    cout << "5-minute traveler wait time intervals elapsed " << waitCount << endl;
 //    cout << "Total number of trips reassigned "<< tripsReassigned << endl;
     cout << "Average wait time " << avgWait << endl;
-    cout << "Total miles traveled " << totDist / 4 << endl;
-    cout << "Total unoccupied miles traveled " << unoccDist / 4.0 << endl;
-    cout << "Total reallocation miles traveled " << reallocDist / 4.0 << endl;
-    cout << "Total unoccupied miles to charge " << chargeDist / 4.0 << endl;
+    cout << "Total miles traveled " << totDist * cellSize << endl;
+    cout << "Total unoccupied miles traveled " << unoccDist * cellSize << endl;
+    cout << "Total reallocation miles traveled " << reallocDist * cellSize << endl;
+    cout << "Total unoccupied miles to charge " << chargeDist * cellSize << endl;
     cout << "Total Charges "<< chargeCount << endl;
     cout << "Total Charge Time " << chargeTime << endl;
     cout << "Average Congestion Time per Station " << congestTime / nStations << endl;
@@ -2628,10 +2635,10 @@ void Simulator::reportFinalResults (long totDistRun, long totUnoccDistRun, long 
     cout << "Average wait time " << totAvgWait << "              COV: " << totAvgWaitCOVF  << "\tsd: "<<totAvgWait * totAvgWaitCOVF<< endl;
 //    cout << "Maximum number of trips starting during any 5 minute period " << maxTripGen << endl;
     cout << "Average number of reassigned trips: " << totTripsReassigned / (1.0 * numRuns)<< endl;
-    cout << "Average total miles traveled " << totDistRun / 4 << "     COV: " << totDistRunCOVF << "\tsd: "<<(totDistRun / 4.0)* totDistRunCOVF<< endl;
-    cout << "Average total unocc mi traveled  " << totUnoccDistRun / 4 << "  COV: " << totUnoccDistRunCOVF << "\tsd: "<<(totUnoccDistRun / 4.0) * totUnoccDistRunCOVF<< endl;
-    cout << "Average reallocation mi traveled " << totReallocDistRun / 4 << " COV: " << totReallocDistRunCOVF << endl;
-    cout << "Average miles to charge " << totUnoccChargeDistRun / 4 << "   COV: " << totUnoccChargeDistRunCOVF << endl;
+    cout << "Average total miles traveled " << totDistRun * cellSize << "     COV: " << totDistRunCOVF << "\tsd: "<<(totDistRun * cellSize)* totDistRunCOVF<< endl;
+    cout << "Average total unocc mi traveled  " << totUnoccDistRun * cellSize << "  COV: " << totUnoccDistRunCOVF << "\tsd: "<<(totUnoccDistRun * cellSize) * totUnoccDistRunCOVF<< endl;
+    cout << "Average reallocation mi traveled " << totReallocDistRun * cellSize << " COV: " << totReallocDistRunCOVF << endl;
+    cout << "Average miles to charge " << totUnoccChargeDistRun * cellSize << "   COV: " << totUnoccChargeDistRunCOVF << endl;
     cout << "Average charge time " << totChargeTimeRun << "   COV: " << totChargeTimeRunCOVF << endl;
     cout << "Average number of charges " << totNumChargeRun << "   COV: " << totNumChargeRunCOVF << endl;
     cout << "Average charge congestion times per run " << totCongestTimeRun << "   COV: " << totCongestTimeRunCOVF << endl;
@@ -11495,6 +11502,7 @@ void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int tra
 
 void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts)
 {
+	cout << "Using SCRAM" << endl;
         Matching matching;
         int trpX, trpY;
 	vector<int> reassigned;
