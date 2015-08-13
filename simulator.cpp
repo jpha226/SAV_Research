@@ -11499,6 +11499,13 @@ void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int tra
 void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts)
 {
         Matching matching;
+
+	if (matchAlgorithm == SCRAM)
+		matching.setMinimizeMakespan(true);
+	else 
+		matching.setMinimizeMakespan(false);
+
+
         int trpX, trpY;
 	vector<int> reassigned;
         vector<Car*> cars;

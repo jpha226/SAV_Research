@@ -27,7 +27,7 @@ inline double Matching::getdist(const Point &a, const Point &b){
 #define VECREMOVE(vec, v) (vec).erase(  \
               std::remove((vec).begin(), (vec).end(), (v)), (vec).end())
 
-Matching::Matching(){nTrips = 0; nCars = 0;}
+Matching::Matching(){nTrips = 0; nCars = 0; useMinimalMakespan = true;}
 
 Matching::~Matching()
 {
@@ -50,6 +50,8 @@ Matching::~Matching()
 	delete[] cost;
 */
 }
+
+void Matching::setMinimizeMakespan(bool minimizeMakespan) {useMinimalMakespan = minimizeMakespan;}
 
 void Matching::setDimensions(int nt, int nc)
 {
@@ -548,8 +550,14 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
   // Call getMinimalMaxEdgeInPerfectMatching to get minimum maximal edge in a perfect mathcing.
   clock_t c1,c2;
   c1 = clock();
-  int choice = getMinimalMaxEdgeInPerfectMatching(edges, n, n);
-  double max_edge_value = edges[choice].first;
+  int choice;
+  double max_edge_value;
+  if (useMinimalMakespan) {
+    choice = getMinimalMaxEdgeInPerfectMatching(edges, n, n);
+    max_edge_value = edges[choice].first;
+  } else {
+    max_edge_value = 10000.0;
+  }
   
   // Now remove (make very large) all edges that are greater than max_edge_value
   for(int i = 0; i < edges.size(); i++){

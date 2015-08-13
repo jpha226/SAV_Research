@@ -20,6 +20,7 @@
 //#define SMALL 40
 #define GREEDY 0
 #define SCRAM 1
+#define HUNGARIAN 2
 //#define SAV 2
 //#define SAEV 3
 #define SEPARATE 0
