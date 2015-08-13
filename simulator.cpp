@@ -80,7 +80,6 @@ using namespace std;
 // Begin Program **************************************************************************************************
 Simulator::Simulator(int xDim, int yDim)
 {
-	cout<<"Constructor!"<<endl;
 	// Grid variables
 	xMax = xDim;
 	yMax = yDim;
@@ -107,10 +106,8 @@ Simulator::Simulator(int xDim, int yDim)
 	// Pricing variables
 	base_price = 0.85 * cellSize;
 	saev_vott = 0.35;
-	cout << "load params"<<endl;
 //	string inputFile = "input.txt";
         loadParameters("input.txt");
-	cout << "Done load"<<endl;
 	base_price += cellSize;
 	cout << xMax << " " << yMax << endl;
 	// Initialize grid structures for the map
@@ -139,7 +136,6 @@ Simulator::Simulator(int xDim, int yDim)
 
 	setTripDist();
 	loadTripRateData("AustinTripRates.csv","AustinCellMap.csv");	
-	cout << "Done!"<<endl;
 }
 
 Simulator::Simulator(){ Simulator(40,40);}
@@ -187,7 +183,7 @@ void Simulator::runSimulation()
 		maxAvailStations = 0;
 		int iter = 1;
 		cout << abs(prevMaxAvailStations - maxAvailStations)/(1.0*prevMaxAvailStations) << endl;
-		while ((abs(prevMaxAvailStations - maxAvailStations)/(1.0*prevMaxAvailStations) > 0.01) && iter < 100 || iter < 5){
+		while ((abs(prevMaxAvailStations - maxAvailStations)/(1.0*prevMaxAvailStations) > 0.01) && iter < 100){
 
 			prevMaxAvailStations = maxAvailStations;
 		        initVars(iter, true, false);
@@ -305,7 +301,7 @@ void Simulator::runSimulation()
 		t2 = clock();
 		time_diff = ((float)t2 - (float)t1);
 		seconds = time_diff / CLOCKS_PER_SEC;
-		if (matchAlgorithm == SCRAM)
+		if (false)//matchAlgorithm == SCRAM)
 		        reportMatchingResults();
 		else{
 			//printParameters();
@@ -7921,7 +7917,7 @@ double Simulator::getRate (int x, int y, double r, double xCent, double yCent, d
 
     	} else {
 
-		if (distToCen <= nearDist)
+		if (distToCen <= innerDist)
         	{
         		rate = nearRate * (distToCen / nearDist) + innerRate * ((nearDist - distToCen) / nearDist);
     		} else {
@@ -8635,7 +8631,7 @@ Car Simulator::genNewCar (Trip trp)
     nCar.stationLink = false;
     randGas = rand();
     randGas = randGas / RAND_MAX;
-
+    nCar.moved = false;
     nCar.gas = carRange;// * randGas;
     nCar.refuel = 0;
 //    cout << "New Car Gas: "<<nCar.gas<<endl;
@@ -11502,7 +11498,6 @@ void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int tra
 
 void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts)
 {
-	cout << "Using SCRAM" << endl;
         Matching matching;
         int trpX, trpY;
 	vector<int> reassigned;
@@ -11557,7 +11552,7 @@ void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav
 						tripList[tripList.size() - 1].waitPtr = CarMx[c][y][c].currTrip;
 						matching.addTrip(trip->startX,trip->startY,tripList.size() - 1, dist);
 						reassigned.push_back(tripList.size() - 1);
-						cout << "Trip readded to list" << endl;
+						//cout << "Trip readded to list" << endl;
 						totTripsReassigned++;
 						tripsReassigned++;
 					}
@@ -11570,7 +11565,7 @@ void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav
 	//if (time == 71 && tripList.size() == 77)
 	//	cout << "right call"<<endl;
 //      cout << "Time of day: "<<time<<endl;
-  //    cout << "num cars: " << cars.size() <<" "<<tripList.size()<< endl;
+	//cout << "num cars: " << cars.size() <<" num trips: "<<tripList.size()<< endl;
         if (cars.size() == 0){
         //	if (time == 71 || time == 72)
 	//		cout << "None matched cars: "<< time <<endl; 
@@ -11578,8 +11573,13 @@ void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav
 	}
 //      cout << "call match func"<<endl;
         matching.setDimensions(tripList.size(),cars.size());
+	clock_t t1,t2;
+	t1 = clock();
         vector<Edge> result = matching.findMatching();
-	
+	t2 = clock();
+	float diff = ((float)t2) - ((float)t1);
+	float seconds = diff / CLOCKS_PER_SEC;
+	//cout << "SCRAM took: " << seconds << endl;
         int carIndex,trip;
         double waitTrav;
 	char a;

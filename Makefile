@@ -1,6 +1,6 @@
 CC = g++ 
 
-CFLAGS = -o3
+CFLAGS = -g 
 
 simulator: main.o simulator.o matching.o
 	${CC} ${CFLAGS} main.o simulator.o matching.o -o simulator
