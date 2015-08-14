@@ -757,7 +757,10 @@ void Simulator::loadParameters(char* input)
             } else if (strcmp (varStr, "cellSize") == 0) {
                 inputVal = strtod(valStr, NULL);
                 cellSize = (float) inputVal;
-            }
+            } else if (strcmp (varStr, "limitGreedySearch") == 0) {
+	        inputVal = strtod(valStr,NULL);
+                limitGreedySearch = (bool) inputVal;
+	    }
 
         }
     }
@@ -11452,9 +11455,14 @@ void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int tra
 //	cout << "using greedy match"<<endl;
 	int trueTrav;
 	double x;
-        for (int d = 0; d < trav; d++)
-        {
+	int tripsLeft = 1;
 
+	if (!limitGreedySearch)
+		trav = xMax;
+
+        for (int d = 0; d < trav && tripsLeft > 0; d++)
+        {
+		tripsLeft = 0;
                 if (time % 2 == 0){
 
                         for (int i = 0; i < tripList.size(); i++)
@@ -11470,6 +11478,8 @@ void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int tra
 					for (int j = (int)(d*x); j < (1+d)*x; j++)
 	                                        findNearestCar(tripList[i],  j, trav,  reportProcs, nw, ne, se, sw, coldStarts, hotStarts, run, checkStationDistance);
                                 }
+				if (tripList[i].carlink == false && tripList[i].modeOfTransit == 2)
+					tripsLeft++;
                         }
 
                 }else {
@@ -11488,6 +11498,8 @@ void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int tra
 					for (int j = (int)(d*x); j < (1+d)*x; j++)
 	                                        findNearestCar(tripList[i],  j, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, run, checkStationDistance);
 		                }
+				if (tripList[i].carlink == false && tripList[i].modeOfTransit == 2)
+					tripsLeft++;
 			
                         }
 
@@ -11515,7 +11527,7 @@ void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav
 	}
 
         for (int trp=0; trp < tripList.size(); trp++)
-                matching.addTrip(tripList[trp].startX, tripList[trp].startY, trp, -1);
+                matching.addTrip(tripList[trp].startX, tripList[trp].startY, trp, -1, tripList[trp].tripDist);
 
         for (int x = 0; x < xMax; x++)
         {
@@ -11540,7 +11552,7 @@ void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav
                                         }*/
                                         if (carIndex == cars.size())
                                                 cars.push_back(&CarMx[x][y][c]);
-                                        matching.addCar(x,y,carIndex);
+                                        matching.addCar(x,y,carIndex,CarMx[x][y][c].gas);
                                 } else { 
 					// If car has not picked up add trip and car
 					// Else do nothing
@@ -11551,13 +11563,13 @@ void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav
 						curr = CarMx[x][y][c];
 						Trip *trip = curr.currTrip;
 						cars.push_back(&CarMx[x][y][c]);
-						matching.addCar(x,y,carIndex);
+						matching.addCar(x,y,carIndex, CarMx[x][y][c].gas);
 						int dist = abs(curr.x - trip->startX) + abs(curr.y - trip->startY);
 						CarMx[x][y][c].inUse = false;
 						CarMx[x][y][c].currTrip->carlink = false;
 						tripList.push_back(*(CarMx[x][y][c].currTrip));
 						tripList[tripList.size() - 1].waitPtr = CarMx[c][y][c].currTrip;
-						matching.addTrip(trip->startX,trip->startY,tripList.size() - 1, dist);
+						matching.addTrip(trip->startX,trip->startY,tripList.size() - 1, dist, trip->tripDist);
 						reassigned.push_back(tripList.size() - 1);
 						//cout << "Trip readded to list" << endl;
 						totTripsReassigned++;

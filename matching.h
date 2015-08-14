@@ -52,8 +52,8 @@ class Matching{
 		Matching(int num_cars, int num_trips);
 		~Matching();
 		void createEdge(int c, int trp, int dist);
-		void addCar(int x, int y, int c);
-		void addTrip(int x, int y, int t, int l);
+		void addCar(int x, int y, int c, int limit);
+		void addTrip(int x, int y, int t, int l, int length);
 		void setMinimizeMakespan(bool minimizeMakespan);
 		double* getKthSmallest(int k, std::vector<Point> list, std::vector<Point> otherlist);
 		std::vector<Edge> findMatching();	
@@ -77,6 +77,8 @@ class Matching{
 		bool useMinimalMakespan;
 		std::vector<edge*> edge_set;
 		std::vector<int> limit;
+		std::vector<int> car_limit;
+		std::vector<int> trip_length;
 		int nTrips;
 		int nCars;
 		int adjustedTrips;

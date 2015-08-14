@@ -68,12 +68,16 @@ void Matching::setDimensions(int nt, int nc)
 	edge_set.push_back(e);
 }*/
 
-void Matching::addCar(int x, int y, int id){t.starts.push_back(std::make_pair(id,std::make_pair(x, y)));}
+void Matching::addCar(int x, int y, int id, int limit){
+	t.starts.push_back(std::make_pair(id,std::make_pair(x, y)));
+	car_limit.push_back(limit);
+}
 
-void Matching::addTrip(int x, int y, int id, int l){
+void Matching::addTrip(int x, int y, int id, int l, int length){
 
 	t.targets.push_back(std::make_pair(id,std::make_pair(x, y)));
 	limit.push_back(l);
+	trip_length.push_back(length);
 	if (id != limit.size() - 1)
 		std::cout<< " id error" <<std::endl;
 }
@@ -569,7 +573,8 @@ std::vector<Edge> Matching::mmd_msd2(Test t){
       cost[edges[i].second.first][edges[i].second.second] = max_edge_value*n+1;
     if (limit[edges[i].second.second] != -1 && edges[i].second.first >= nCars)
       cost[edges[i].second.first][edges[i].second.second] = max_edge_value*n+1;
-
+    if (car_limit[edges[i].second.first] < edges[i].first + trip_length[edges[i].second.second])
+      cost[edges[i].second.first][edges[i].second.second] = max_edge_value*n+1;
 
   }
 

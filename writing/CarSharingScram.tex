@@ -17,7 +17,26 @@
 \title{SCRAM Applied to Car Sharing}
 \author{Josiah Hanna, Peter Stone}
 \maketitle
+\begin{abstract}
+\begin{quote}
 
-\bibliography{}
+\end{quote}
+\end{abstract}
+
+\noindent 
+
+\section{Introduction}
+We seek to improve the performance of a fleet of shared autonomous vehicles through improved matching of vehicles to passengers requesting rides. 
+
+\section{Car Sharing Model}
+Our model for car sharing is a discrete-time agent based model proposed by Fagnant and Kockelman \cite{fagnant2014travel}. This model represents a 10 mile by 10 mile city as a grid of 0.25 mile by 0.25 mile grid cells. 
+Trips are generated in each grid cell according to a rate that decreases the farther a cell is from the city center. This rate is the mean for a Poisson process from which a number of trips is drawn for the corresponding cell. The distance of each trip is drawn from a distribution based on NHTS trip distance data. 
+Time is discretized into five minute intervals for a total of 288 time steps per day. At each time step available vehicles are matched to passengers requesting trips. If a trip cannot be served it is added to a wait list and can request a ride again at the next time step. Vehicles that could not serve trips because they were low on fuel go to the nearest fueling station (assumed to be within the same grid cell) and are out of service for two time steps (10 minutes). 
+
+\section{Matching Algorithms}
+Without a centralized trip-car assignment system, a vehicle 
+
+
+\bibliography{CarSharing}
 \bibliographystyle{aaai}
 \end{document}

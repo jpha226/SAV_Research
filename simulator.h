@@ -169,6 +169,7 @@ class Simulator{
 		char* readName;
 		vector<int> random_seeds;
 		float cellSize;
+		bool limitGreedySearch;
 
 		long totDistRun;
 		long totUnoccDistRun;
