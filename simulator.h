@@ -170,6 +170,8 @@ class Simulator{
 		vector<int> random_seeds;
 		float cellSize;
 		bool limitGreedySearch;
+		int fleetSizeLimit;
+		bool limitFleetSize;
 
 		long totDistRun;
 		long totUnoccDistRun;
@@ -305,7 +307,7 @@ class Simulator{
 
 	public:
 		Simulator();
-		Simulator(int xDim, int yDim);
+		Simulator(int fleet_size);
 		~Simulator();
 
 		void loadParameters(char* input);
@@ -416,7 +418,7 @@ class Simulator{
 		void showWaitCars(int t, vector<Trip> waitList [6], int* waitListI);
 
 		// Functions for matching cars
-		void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts, int run, bool checkStationDistance);
+		void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts, int run, bool checkStationDistance, bool warmstart);
 		void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts);
 		void assignCar (Car* c, Trip* trp);
 		void findNearestStation (Car* car, int dist, int maxDist);

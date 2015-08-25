@@ -78,11 +78,11 @@ using namespace std;
 
 
 // Begin Program **************************************************************************************************
-Simulator::Simulator(int xDim, int yDim)
+Simulator::Simulator(int fleet_size)
 {
 	// Grid variables
-	xMax = xDim;
-	yMax = yDim;
+	xMax = 40;
+	yMax = 40;
 	numZonesL = 5;
 	numZonesS = 10;
 	zoneSizeL = xMax / numZonesL;
@@ -102,6 +102,9 @@ Simulator::Simulator(int xDim, int yDim)
 	rejectLimit = 1000000;
 	rangePercentToRefuel = 1.0;
 	cellSize=0.25;
+
+	fleetSizeLimit = fleet_size;
+	limitFleetSize = false;
 
 	// Pricing variables
 	base_price = 0.85 * cellSize;
@@ -138,7 +141,7 @@ Simulator::Simulator(int xDim, int yDim)
 	loadTripRateData("AustinTripRates.csv","AustinCellMap.csv");	
 }
 
-Simulator::Simulator(){ Simulator(40,40);}
+Simulator::Simulator(){ Simulator(10000000);}
 
 Simulator::~Simulator()
 {
@@ -760,6 +763,9 @@ void Simulator::loadParameters(char* input)
             } else if (strcmp (varStr, "limitGreedySearch") == 0) {
 	        inputVal = strtod(valStr,NULL);
                 limitGreedySearch = (bool) inputVal;
+	    } else if (strcmp (varStr, "limitFleetSize") == 0) {
+		inputVal = strtod(valStr,NULL);
+		limitFleetSize = (bool) inputVal;
 	    }
 
         }
@@ -1575,7 +1581,7 @@ void Simulator::runSharedAV (bool warmStart, bool lastWarm, int iter, bool check
 		}
 
 		if (matchAlgorithm == GREEDY)
-			matchTripsToCarsGreedy(mergedTripList, t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, iter, checkStationDistance);
+			matchTripsToCarsGreedy(mergedTripList, t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, iter, checkStationDistance,warmStart);
 		else
 			matchTripsToCarsScram(mergedTripList, t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 
@@ -1639,7 +1645,7 @@ void Simulator::runSharedAV (bool warmStart, bool lastWarm, int iter, bool check
         	for (int w = 5; w>= 0; w--)
         	{
 			if (matchAlgorithm == GREEDY || warmStart)
-	                	matchTripsToCarsGreedy(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, iter, checkStationDistance);
+	                	matchTripsToCarsGreedy(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, iter, checkStationDistance, warmStart);
                 	else
 				matchTripsToCarsScram(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 	        }
@@ -1682,7 +1688,7 @@ void Simulator::runSharedAV (bool warmStart, bool lastWarm, int iter, bool check
 	                {
 
 //                    if (warmStart && totNumCars < 1500)
-	                    if ((warmStart && !lastWarm) || (lastWarm && totNumCars < maxAvailCars))
+	                    if (((warmStart && !lastWarm) || (lastWarm && totNumCars < maxAvailCars)) && totNumCars < fleetSizeLimit)
         	            {
                         // generate a new car
                 	        newCarCt ++;
@@ -1733,7 +1739,7 @@ void Simulator::runSharedAV (bool warmStart, bool lastWarm, int iter, bool check
 		  }
 	
 		if (matchAlgorithm == GREEDY || warmStart)
-			matchTripsToCarsGreedy(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, iter, checkStationDistance);
+			matchTripsToCarsGreedy(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, iter, checkStationDistance, warmStart);
 		else
 			matchTripsToCarsScram(TTMx[t], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 	
@@ -11450,14 +11456,14 @@ void Simulator::showWaitCars(int t, vector<Trip> waitList [6], int* waitListI)
 
 
 // Matching functions...conveniently at the end of the code
-void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts, int run, bool checkStationDistance)
+void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts, int run, bool checkStationDistance, bool warmstart)
 {
 //	cout << "using greedy match"<<endl;
 	int trueTrav;
 	double x;
 	int tripsLeft = 1;
 
-	if (!limitGreedySearch)
+	if (!limitGreedySearch && !warmstart)
 		trav = xMax;
 
         for (int d = 0; d < trav && tripsLeft > 0; d++)

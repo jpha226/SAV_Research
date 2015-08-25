@@ -18,23 +18,22 @@ using namespace std;
 int main(int argc, char *argv[]){
 
 	Simulator* simulator;
-	int xMax = 40;
-	int yMax = 40;
+	int fleet_size;
 	int input;
 
 	if (argc <= 1)
-		simulator = new Simulator(xMax,yMax);
+		simulator = new Simulator(1000000);
 	else{
 		int arg_index = 0;
 		while (arg_index < argc)
 		{
-			if (strcmp (argv[arg_index],"-s") == 0){
-				xMax = strtod(argv[arg_index + 1],NULL);
-				yMax = xMax;
+			if (strcmp (argv[arg_index],"--fleet-size") == 0){
+				fleet_size = strtod(argv[arg_index + 1],NULL);
 			}
 			arg_index++;
 		}
-		simulator = new Simulator(xMax, yMax);
+		cout << fleet_size << endl;
+		simulator = new Simulator(fleet_size);
 		arg_index = 0;
 		// Second pass for additional arguments if present
 		while (arg_index < argc)
@@ -43,7 +42,7 @@ int main(int argc, char *argv[]){
 		}
 	}
 
-	simulator->runSimulation();
+	simulator -> runSimulation();
 
 	return 0;
 }
