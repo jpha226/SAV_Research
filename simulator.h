@@ -21,6 +21,7 @@
 #define GREEDY 0
 #define SCRAM 1
 #define HUNGARIAN 2
+#define DECENTRALIZED 3
 //#define SAV 2
 //#define SAEV 3
 #define SEPARATE 0
@@ -420,6 +421,7 @@ class Simulator{
 		// Functions for matching cars
 		void matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts, int run, bool checkStationDistance, bool warmstart);
 		void matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts);
+		void matchTripsToCarsDecentralized(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts, int run, bool checkStationDistance, bool warmstart);
 		void assignCar (Car* c, Trip* trp);
 		void findNearestStation (Car* car, int dist, int maxDist);
 		Station* genNewStation(Car car);

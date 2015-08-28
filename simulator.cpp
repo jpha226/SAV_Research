@@ -518,7 +518,7 @@ void Simulator::initVars (int runNum, bool warmStart, bool checkStationDistance)
     if (runNum == 1)
     {
 	cout <<"Seed"<<endl;
-	srand(rseed);
+	srand(time(NULL));//rseed);
 	if (!warmStart){
 		random_seeds.clear();
 		for (int i = 0; i < numRuns; i++)
@@ -1582,8 +1582,11 @@ void Simulator::runSharedAV (bool warmStart, bool lastWarm, int iter, bool check
 
 		if (matchAlgorithm == GREEDY)
 			matchTripsToCarsGreedy(mergedTripList, t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, iter, checkStationDistance,warmStart);
-		else
+		else if (matchAlgorithm == HUNGARIAN || matchAlgorithm == SCRAM)
 			matchTripsToCarsScram(mergedTripList, t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
+		else
+                        matchTripsToCarsDecentralized(mergedTripList, t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, iter, checkStationDistance,warmStart);
+
 
 		// Clear waitList
 		for (int w=0; w <6; w++){
@@ -1646,6 +1649,8 @@ void Simulator::runSharedAV (bool warmStart, bool lastWarm, int iter, bool check
         	{
 			if (matchAlgorithm == GREEDY || warmStart)
 	                	matchTripsToCarsGreedy(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, iter, checkStationDistance, warmStart);
+			else if (matchAlgorithm == DECENTRALIZED)
+                                matchTripsToCarsDecentralized(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, iter, checkStationDistance, warmStart);
                 	else
 				matchTripsToCarsScram(waitList[w], t, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts);
 	        }
@@ -11512,6 +11517,25 @@ void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int tra
                 }
         }
 	
+}
+
+void Simulator::matchTripsToCarsDecentralized(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts, int run, bool checkStationDistance, bool warmstart)
+{
+    vector<int> xvect;
+    for (int x = 0; x < tripList.size(); x++)
+    {
+        xvect.push_back(x);
+    }
+    random_shuffle(xvect.begin(), xvect.end());
+    for (int i=0; i < xvect.size(); i++) {
+      
+      if (tripList[i].carlink == false) {
+        for (int d=0; d < xMax && tripList[i].carlink == false; d++) {
+          findNearestCar(tripList[i], d, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, run, checkStationDistance);
+        }
+      }
+    }	
+
 }
 
 void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts)
