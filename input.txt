@@ -14,7 +14,7 @@ saveRate=0
 readFile=0
 #rseed=9872
 readName=CarStatus29W.txt
-numRuns=1
+numRuns=100
 businessVottDistributionFile=businessVottFile.csv
 personalVottDistributionFile=personalVottFile.csv
 personalTripProb=0.8134
@@ -38,6 +38,6 @@ useModeChoice=0
 tripDistDistributionFile=tripDistDistributionFile.csv
 useCityTripData=0
 cellSize=0.25
-limitGreedySearch=1
+limitGreedySearch=0
 limitFleetSize=0
 
