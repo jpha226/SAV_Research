@@ -3,6 +3,7 @@
 \usepackage{times}
 \usepackage{helvet}
 \usepackage{courier}
+\usepackage{tikz}
 
 \setlength{\pdfpagewidth}{8.5in}
 \setlength{\pdfpageheight}{11in}
@@ -19,13 +20,16 @@
 \maketitle
 \begin{abstract}
 \begin{quote}
-
+Carsharing programs provide an alternative to private vehicle ownership. Autonomous vehicles have the capability to remove many issues with carsharing programs by increasing user access to vehicles. Autonomous vehicles would be able to come directly to users and drop them off at any location. While the ability to do this would be significant for carsharing programs it could lead to inefficiencies if the assignment of cars to users is not done in a smart way. In this paper we consider car sharing with autonomous vehicles as an assignment problem and consider different methods for matching cars to users to meet different criteria. Our results also highlight some of the problems with greedy or decentralized approaches.
 \end{quote}
 \end{abstract}
 
 \noindent 
 
 \section{Introduction}
+Carsharing is a transportation service where users can access a personal vehicle when desired without the need to own a private vehicle. Current systems such as Car2Go or ZipCar have car parking spots scattered throughout the city. Users can find a car near them and use it.
+
+
 We seek to improve the performance of a fleet of shared autonomous vehicles through improved matching of vehicles to passengers requesting rides. 
 
 \section{Car Sharing Model}
@@ -47,17 +51,52 @@ This model approximates the effects of a car sharing system in a 10 mile by 10 m
 
 \section{Matching Algorithms}
 
+\begin{figure}
+
+\begin{tikzpicture}
+\centering
+\draw[step=0.5cm,color=gray] (-1,-1) grid (1,1);
+\node at (-0.75,+0.75) {C};
+\node at (-0.75,-0.75) {T};
+\node at (+0.25,-0.75) {C};
+%\node at (+0.75,+0.75) {D};
+%\node at (-0.75,+0.25) {E};
+%\node at (-0.25,+0.25) {F};
+%\node at (+0.75,+0.25) {H};
+
+\node at (+0.75,-0.75) {T};
+\end{tikzpicture}
+\hspace{2mm}
+\begin{tikzpicture}
+\draw[step=0.5cm,color=gray] (-1,-1) grid (1.5,1);
+\node at (-0.75,+0.75) {C};
+\node at (-0.75,-0.75) {T};
+\node at (+0.25,-0.75) {C};
+%\node at (+0.75,+0.75) {D};
+%\node at (-0.75,+0.25) {E};
+%\node at (-0.25,+0.25) {F};
+%\node at (+0.75,+0.25) {H};
+
+\node at (+1.25,-0.75) {T};
+\end{tikzpicture}
+\label{exampleFigure}
+\caption{These small examples show the shortcomings of the various matching algorithms discussed in this paper.}
+\end{figure}
+
 \paragraph{Decentralized Greedy Matching}
-Without a centralized trip-car assignment system trips would need to request the nearest vehicle similar to how users of Uber or Lyft look for nearby vehicles. This decentralized method can be implemented as a greedy matching of trips to vehicles. In a random order, trips are assigned to the closest vehicle to them. If one is not available they are added to a wait list. 
+Without a centralized trip-car assignment system trips would need to request the nearest vehicle similar to how users of Uber or Lyft look for nearby vehicles. This decentralized method can be implemented as a greedy matching of trips to vehicles. In a random order, trips are assigned to the closest vehicle to them. If one is not available they are added to a wait list and will make requests at the next time step. We assume that passengers can request a vehicle from anywhere in the city. In practice this might be constrained to a local area to prevent cars from having to cross the entire city to reach a passenger. This would result in some passengers not receiving service due to no cars in the area. Figure \ref{exampleFigure} illustrates how this approach can result in inefficiencies.
+
 
 \paragraph{Centralized Greedy Matching}
-Each trip looks for a car within a one cell radius of itself. After all trips have made this search the radius is increased and trips search again. This radius can either increase up to searching the entire city or terminate at a fixed limit (e.g. the distance a vehicle can travel in one time step).
+To improve on the decentralized greedy approach we consider a centralized greedy approach. Each trip looks for a car within a one cell radius of itself. After all trips have made this search the radius is increased and trips search again. The advantage of this approach is that a vehicle will not be assigned to a passenger if it could have served another passenger in less time. The disadvantage is that there are no guarantees that the assignment will be optimal. Figure \ref{exampleFigure} gives a scenario where this approach fails to produce the optimal solution.
+
+This radius can either increase up to searching the entire city or terminate at a fixed limit (e.g. the distance a vehicle can travel in one time step).
 
 \paragraph{Hungarian Algorithm}
-A greedy approach to the assignment problem is likely to be suboptimal. A natural improvement is the Hungarian algorithm \cite{kuhn1955hungarian} which finds a minimum cost perfect matching in a bipartite graph. 
+A natural improvement is the Hungarian algorithm \cite{kuhn1955hungarian} which finds a minimum cost perfect matching in a bipartite graph. The Hungarian algorithm can be implemented to run in time $O(n^3)$ which is fast enough to compute our car to passenger assignment in a few seconds. The input to the algorithm is a set of $n$ cars and $n$ trips and a distance metric to be minimized. Since we have an input of $n$ cars and $m$ trips we can create $|n-m|$ dummy passengers if $n > m$ or dummy cars if $m > n$. Setting the distance to a dummy car/passenger to zero results in the Hungarian algorithm returning the minimized distance for unequal $m$ and $n$ \cite{macalpine2015scram}.
 
 \paragraph{Minimal Makespan Matching}
-The Hungarian algorithm produces a minimum cost perfect matching but the optimal solution does not consider the makespan problem. In our scenario this equates to the possibility that some trips have a much longer wait time even though the total wait across all trips is minimized. To improve on this we use a minimal-makespan matching algorithm to find an assignment that minimizes the longest distance that any vehicle must travel to a passenger. Specifically we implement the Minimum Maximal Distance + Minimum Sum Distance$^2$ (MMD+MSD$^2$) proposed in \cite{macalpine2015scram}.
+The Hungarian algorithm produces a minimum cost perfect matching but the optimal solution does not consider fairness of the system. In our scenario this equates to the possibility that some trips have a much longer wait time even though the total wait across all trips is minimized. To improve on this we use a scalable collision-avoiding role assignment with minimal-makespan (SCRAM) algorithm to find an assignment that minimizes the longest distance that any vehicle must travel to a passenger. Specifically we implement the Minimum Maximal Distance + Minimum Sum Distance$^2$ (MMD+MSD$^2$) proposed in \cite{macalpine2015scram}. Given a bipartite graph, $G = ({S,T},E)$  this algorithm first finds the minimum maximal edge in a perfect matching from $S$ to $T$. Then edges in $E$ with length larger than this edge are removed from the edge set. Finally, the Hungarian algorithm is ran on this reduced set of edges to find the minimum cost matching.  
 
 \section{Experimental Setup}
 To compare different approaches we run two sets of experiments. The first set of experiments compares the performance of the above algorithms in trials of 100 consecutive days. In these experiments the fleet size is constant to observe the strengths of the different algorithms under the same settings.
