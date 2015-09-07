@@ -11547,6 +11547,10 @@ void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int tra
 void Simulator::matchTripsToCarsDecentralized(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts, int run, bool checkStationDistance, bool warmstart)
 {
 
+    int searchRadius = trav;
+    if (!limitGreedySearch)
+      searchRadius = xMax;
+
     int carCt=0, tripCt = tripList.size();
     for (int x=0;x<xMax;x++)
       for(int y=0; y<yMax; y++)
@@ -11563,7 +11567,7 @@ void Simulator::matchTripsToCarsDecentralized(vector<Trip> &tripList, int time, 
     for (int i=0; i < xvect.size(); i++) {
       
       if (tripList[i].carlink == false) {
-        for (int d=0; d < xMax && tripList[i].carlink == false; d++) {
+        for (int d=0; d < searchRadius && tripList[i].carlink == false; d++) {
           findNearestCar(tripList[i], d, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, run, checkStationDistance);
         }
       }
@@ -11579,6 +11583,9 @@ void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav
 	else 
 		matching.setMinimizeMakespan(false);
 
+        int searchRadius = trav;
+        if (!limitGreedySearch)
+          searchRadius = xMax;
 
         int trpX, trpY;
 	vector<int> reassigned;
@@ -11671,23 +11678,23 @@ void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav
                 trip = (*it).second.second;
                 waitTrav = abs(cars[carIndex]->x - tripList[trip].startX) + abs(cars[carIndex]->y - tripList[trip].startY);
 
-//		if (waitTrav <= trav){
+		if (waitTrav <= searchRadius){
 
-                assignCar(cars[carIndex], &tripList[trip]);
-		cars[carIndex]->currTrip = &tripList[trip];
+        	        assignCar(cars[carIndex], &tripList[trip]);
+			cars[carIndex]->currTrip = &tripList[trip];
 
-               	tripList[trip].carlink = true;
+	               	tripList[trip].carlink = true;
                 	//waitTrav = abs(cars[carIndex]->x - tripList[trip].startX) + abs(cars[carIndex]->y - tripList[trip].startY);
 //		if (waitTrav > trav)
 //			cout << "Exceeding max travel: "<<waitTrav <<" "<<trav<<endl;
 
-                tripList[trip].waitTime = tripList[trip].waitTime + (5.0 * waitTrav / trav);
-       	        if (tripList[trip].waitPtr != NULL){
-               	        tripList[trip].waitPtr -> waitTime = tripList[trip].waitTime;
-			tripList[trip].waitPtr -> carlink = true;
-			cars[carIndex]->currTrip = tripList[trip].waitPtr;
+        	        tripList[trip].waitTime = tripList[trip].waitTime + (5.0 * waitTrav / trav);
+       	        	if (tripList[trip].waitPtr != NULL){
+               	        	tripList[trip].waitPtr -> waitTime = tripList[trip].waitTime;
+				tripList[trip].waitPtr -> carlink = true;
+				cars[carIndex]->currTrip = tripList[trip].waitPtr;
+			}
 		}
-//		} else {cout << "Trip didn't get car" << endl;}
 
         }
 //	for (int i=0; i<reassigned.size(); i++)

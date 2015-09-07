@@ -27,7 +27,7 @@ Carsharing programs provide an alternative to private vehicle ownership. Autonom
 \noindent 
 
 \section{Introduction}
-Carsharing is a transportation service where users can access a personal vehicle when desired without the need to own a private vehicle. Current systems such as Car2Go or ZipCar have car parking spots scattered throughout the city. Users can find a car near them and use it.
+Carsharing is a transportation service where users can access a personal vehicle when desired without the need to own a private vehicle. Current systems such as Car2Go or ZipCar have car parking spots scattered throughout the city. Users can find a car near them, use it, and then return it to any of the available parking spots. 
 
 
 We seek to improve the performance of a fleet of shared autonomous vehicles through improved matching of vehicles to passengers requesting rides. 
@@ -35,21 +35,23 @@ We seek to improve the performance of a fleet of shared autonomous vehicles thro
 \section{Car Sharing Model}
 
 % Basic overview
-For experiments we use the agent-based car sharing model proposed by Fagnant and Kockelman \cite{fagnant2014travel}. This model represents a 10 mile by 10 mile city as a grid of 0.25 mile by 0.25 mile grid cells. Vehicles can move freely within cells and can move up, down, left, or right to adjacent cells. Diagonal motion is not permitted and cars do not interfere with each other's path. Time is discretized into five minute intervals for a total of 288 time steps per day. Each run of the simulation corresponds to one 24 hour day.
+For experiments we use the agent-based car sharing model proposed by Fagnant and Kockelman \cite{fagnant2014travel}. This model represents a 10 mile by 10 mile city as a grid of 0.25 mile by 0.25 mile grid cells. Vehicles can can move north, south, east, or west to adjacent cells. Motion within the cells is not modeled. Diagonal motion is not permitted and cars do not interfere with each other's path. Time is discretized into five minute intervals for a total of 288 time steps per day. Each run of the simulation corresponds to one 24 hour day.
 
 % Trip Generation
-Trips are generated in each grid cell according to a rate that decreases the farther a cell is from the city center. This rate is the mean for a Poisson process from which a number of trips is drawn for the corresponding cell. The distance and start time of each trip is drawn from a distribution based on U.S. National Highway Traffic Safety Administration trip distance data. While all trips for the day are generated at the start of the run requests for rides are not made until the start time of the trip. 
+Users requesting trips are generated in each grid cell according to a rate that decreases the farther a cell is from the city center. This rate is the mean for a Poisson process from which a number of trips is drawn for the corresponding cell. The distance and start time for each trip is drawn from a distribution based on U.S. National Highway Traffic Safety Administration trip distance data. While all trips for the day are generated at the start of the run, requests for rides are not made until the start time of the trip. 
 
 % Simulation Cycle
-At each time step available vehicles are matched to passengers requesting trips. If a trip cannot be served it is added to a wait list and can request a ride again at the next time step. Vehicles that could not serve trips because they were low on fuel go to the nearest fueling station (assumed to be within the same grid cell) and are out of service for two time steps (10 minutes). Then vehicles move to pickup passengers. Vehicles already with passengers proceed to their trip destination. Each vehicle can move a fixed number of grid cells depending on the current maximum speed.
+At each time step available vehicles are matched to users requesting trips. If a user cannot be served they are added to a wait list and can request a ride again at the next time step. If a user cannot be served after 30 minutes of wait time the trip is considered unserved. Vehicles that could not serve trips because they were low on fuel go to the nearest fueling station (assumed to be within the same grid cell) and are out of service for two time steps (10 minutes). Then vehicles move to the passengers. Vehicles already with passengers proceed to their trip destination. Each vehicle can move a fixed number of grid cells depending on the current maximum speed.
 
 % Fleet Size
 We consider two schemes for determining the number of cars that are needed to provide adequate service. As in \cite{fagnant2014travel}, the number of cars can be determined by running the simulation for 20 runs with each run initialized with zero cars. The simulation cycle proceeds normally except after a trip has waited for 10 minutes a new car is generated at the start location of the trip. The number of cars generated is an estimate of the required fleet size. The average number of cars generated across these 20 runs is the fleet size. A final run repeats this procedure until the correct fleet size has been generated. Alternatively, since we wish to compare the sensitivity of different methods to variations in the fleet size, we can specify a fixed number of vehicles. In this case the above procedure can be repeated until the requested fleet size is reached and then no more cars are generated.
 
 % Limitations
-This model approximates the effects of a car sharing system in a 10 mile by 10 mile urban area. Car speed has small variations due to time of day and distance from the city center but is otherwise fairly constant. The simulation only models vehicles and trips using the car sharing service. The presence of other modes of transportation is reflected in the trip generation rates and speed variations but these are only approximations. Nonetheless the model has been used in other car sharing studies \cite{fagnant2015operations} to date and is realistic enough for the purpose of this work. 
+This model approximates the effects of a car sharing system in a 10 mile by 10 mile urban area. Car speed has small variations due to time of day and distance from the city center but is otherwise fairly constant. The simulation only models vehicles and passengers using the car sharing service. The presence of other modes of transportation is reflected in the trip generation rates and speed variations but these are only approximations. Nonetheless the model has been used in other car sharing studies \cite{fagnant2015operations} to date and is realistic enough for the purpose of this work. 
 
 \section{Matching Algorithms}
+
+Using the described carsharing model we want to determine how the assignment of vehicles to users affects the performance of the system. An easy way to handle the assignment problem would be to let users request the nearest vehicle to them on a first come first served basis. Unfortunately such simple approaches are not likely to be optimal in terms of the amount of waiting that users have or the number of trips that can be served. In addition, we would like to have a fair system in which some users are not waiting for long periods of time so that other users do not have to wait as long.
 
 \begin{figure}
 
@@ -59,10 +61,6 @@ This model approximates the effects of a car sharing system in a 10 mile by 10 m
 \node at (-0.75,+0.75) {C};
 \node at (-0.75,-0.75) {T};
 \node at (+0.25,-0.75) {C};
-%\node at (+0.75,+0.75) {D};
-%\node at (-0.75,+0.25) {E};
-%\node at (-0.25,+0.25) {F};
-%\node at (+0.75,+0.25) {H};
 
 \node at (+0.75,-0.75) {T};
 \end{tikzpicture}
@@ -72,10 +70,6 @@ This model approximates the effects of a car sharing system in a 10 mile by 10 m
 \node at (-0.75,+0.75) {C};
 \node at (-0.75,-0.75) {T};
 \node at (+0.25,-0.75) {C};
-%\node at (+0.75,+0.75) {D};
-%\node at (-0.75,+0.25) {E};
-%\node at (-0.25,+0.25) {F};
-%\node at (+0.75,+0.25) {H};
 
 \node at (+1.25,-0.75) {T};
 \end{tikzpicture}
@@ -84,7 +78,7 @@ This model approximates the effects of a car sharing system in a 10 mile by 10 m
 \end{figure}
 
 \paragraph{Decentralized Greedy Matching}
-Without a centralized trip-car assignment system trips would need to request the nearest vehicle similar to how users of Uber or Lyft look for nearby vehicles. This decentralized method can be implemented as a greedy matching of trips to vehicles. In a random order, trips are assigned to the closest vehicle to them. If one is not available they are added to a wait list and will make requests at the next time step. We assume that passengers can request a vehicle from anywhere in the city. In practice this might be constrained to a local area to prevent cars from having to cross the entire city to reach a passenger. This would result in some passengers not receiving service due to no cars in the area. Figure \ref{exampleFigure} illustrates how this approach can result in inefficiencies.
+Without a centralized trip-car assignment system trips would need to request the nearest vehicle, similar to how users of Uber or Lyft look for nearby vehicles. This decentralized method can be implemented as a greedy matching of trips to vehicles. In a random order, trips are assigned to the closest vehicle to them. If one is not available they are added to a wait list and will make requests at the next time step. We assume that passengers can request a vehicle from anywhere in the city. In practice this might be constrained to a local area to prevent cars from having to cross the entire city to reach a passenger. This would result in some passengers not receiving service due to no cars in the area. Figure \ref{exampleFigure} illustrates how this approach can result in inefficiencies.
 
 
 \paragraph{Centralized Greedy Matching}
@@ -99,8 +93,7 @@ A natural improvement is the Hungarian algorithm \cite{kuhn1955hungarian} which 
 The Hungarian algorithm produces a minimum cost perfect matching but the optimal solution does not consider fairness of the system. In our scenario this equates to the possibility that some trips have a much longer wait time even though the total wait across all trips is minimized. To improve on this we use a scalable collision-avoiding role assignment with minimal-makespan (SCRAM) algorithm to find an assignment that minimizes the longest distance that any vehicle must travel to a passenger. Specifically we implement the Minimum Maximal Distance + Minimum Sum Distance$^2$ (MMD+MSD$^2$) proposed in \cite{macalpine2015scram}. Given a bipartite graph, $G = ({S,T},E)$  this algorithm first finds the minimum maximal edge in a perfect matching from $S$ to $T$. Then edges in $E$ with length larger than this edge are removed from the edge set. Finally, the Hungarian algorithm is ran on this reduced set of edges to find the minimum cost matching.  
 
 \section{Experimental Setup}
-To compare different approaches we run two sets of experiments. The first set of experiments compares the performance of the above algorithms in trials of 100 consecutive days. In these experiments the fleet size is constant to observe the strengths of the different algorithms under the same settings.
-
+To compare different approaches we run two sets of experiments. The first set of experiments compares the performance of the above algorithms over 100 consecutive days of fleet use. Since each the events of each day affect the next, multiple days are needed to get an idea of system performance. In these experiments the fleet size is set to 1000 vehicles which was experimentally found to be able to serve all users with any method of assignment. We run 50 trials of 100 days each for each method of assignment.
 
 The second set of experiments compares the sensitivity of different methods to fleet size. Starting at a fleet size of 500 vehicles, fleet size is increased in increments of 100 and each method is ran for 50 days.
 
