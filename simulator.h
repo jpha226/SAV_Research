@@ -322,7 +322,7 @@ class Simulator{
 //                  double **zoneSharesL, double **zoneSharesS, double* maxCarUse, double* maxCarOcc, int& totDist, int& unoccDist, int& waitT, bool reportProcs,
   //                int saveRate, bool warmStart, bool lastWarm, long& maxAvailCars, bool& readFile, int startIter, int& unservedT, int* waitCount, int& hotStarts,
     //              int& coldStarts, int nRuns,  int iter, bool checkStationDistance);
-		void placeInitCars ();//int* timeTripCounts, double* maxCarUse, double* maxCarOcc, int& totDist,
+		void placeInitCars (int run);//int* timeTripCounts, double* maxCarUse, double* maxCarOcc, int& totDist,
 //                    int& unoccDist, int& waitT, double dwLookup [][288], bool reportProcs, int& hotStarts, int& coldStarts);
 		void reportResults (int runNum);//int* timeTripCounts, double* maxCarUse, double* maxCarOcc, int totDist, int unoccDist, int waitT, int unservedT, int* waitCount, int hotStarts, int coldStarts, long& totDistRun, long& totUnoccDistRun, long& totCarsRun, long& totTripsRun, long& totHSRun, long& totCSRun, long& totWaitTRun, long& totUnservedTRun, long* totWaitCountRun, int totUnusedRun, int totUnoccRun, double totAvgWait, double totAvgTripDist, int nRuns, int runNum);
 		void reportFinalResults (long totDistRun, long totUnoccDistRun, long totCarsRun, long totTripsRun, long totHSRun, long totCSRun, long totWaitTRun, long totUnservedTRun, long* totWaitCountRun, long totUnusedRun, long totUnoccRun, double totAvgWait, double totAvgTripDist, int numRuns);

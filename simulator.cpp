@@ -93,7 +93,7 @@ Simulator::Simulator(int fleet_size)
 
 	// Simulation variables
 	maxNumRuns = 50;
-	numWarmRuns = 20;
+	numWarmRuns = 5;
 
 	// Range and fuel variables
 	carRange = 1600;
@@ -202,7 +202,7 @@ void Simulator::runSimulation()
 					runSharedAV(true,false,iter,false);//timeTripCounts, maxTrav, maxTravCongested, dwLookup, zoneSharesL, zoneSharesS, maxCarUse, maxCarOcc, totDist,
 // 						unoccDist, waitT, reportProcs, saveRate, true, false, maxAvailCars, readFile, startIter, unservedT, waitCount, 
 //						hotStarts, coldStarts, numRuns, iter, false);
-					placeInitCars();//timeTripCounts, maxCarUse, maxCarOcc, totDist, unoccDist, waitT, dwLookup, reportProcs, hotStarts, coldStarts);
+					placeInitCars(iter);//timeTripCounts, maxCarUse, maxCarOcc, totDist, unoccDist, waitT, dwLookup, reportProcs, hotStarts, coldStarts);
 					cout << "Run " << iter + 1 << endl;
 					cout << "Cars: " << maxAvailCars << endl;
 					cout << "Stations: " << maxAvailStations << endl;
@@ -232,7 +232,7 @@ void Simulator::runSimulation()
 //					unoccDist, waitT, reportProcs, saveRate, true, false, maxAvailCars, readFile, startIter, unservedT, waitCount,
 //					 hotStarts, coldStarts, numRuns, i, true);
          
-				placeInitCars ();//timeTripCounts, maxCarUse, maxCarOcc, totDist, unoccDist, waitT, dwLookup, reportProcs, hotStarts,
+				placeInitCars (i);//timeTripCounts, maxCarUse, maxCarOcc, totDist, unoccDist, waitT, dwLookup, reportProcs, hotStarts,
 					 //coldStarts);
 				t2 = clock();
             		 }
@@ -268,7 +268,7 @@ void Simulator::runSimulation()
 	        generateTrips (true);
         	runSharedAV (true,true,i,true);// timeTripCounts, maxTrav, maxTravCongested,  dwLookup, zoneSharesL, zoneSharesS, maxCarUse, maxCarOcc, totDist, unoccDist,
 //                     waitT, reportProcs, saveRate, true, true, maxAvailCars, readFile, startIter, unservedT, waitCount, hotStarts, coldStarts, numRuns, i, true);
-        	placeInitCars ();//timeTripCounts, maxCarUse, maxCarOcc, totDist, unoccDist, waitT, dwLookup, reportProcs, hotStarts, coldStarts);
+        	placeInitCars (i);//timeTripCounts, maxCarUse, maxCarOcc, totDist, unoccDist, waitT, dwLookup, reportProcs, hotStarts, coldStarts);
 
 	        nCars = 0;
 		nStations = 0;
@@ -296,7 +296,7 @@ void Simulator::runSimulation()
 		else
 			cout << "Run: "<<i<<" seed: "<< randomSeed <<endl;
 	
-	        placeInitCars ();//timeTripCounts, maxCarUse, maxCarOcc, totDist, unoccDist, waitT, dwLookup, reportProcs, hotStarts, coldStarts);
+	        placeInitCars (i);//timeTripCounts, maxCarUse, maxCarOcc, totDist, unoccDist, waitT, dwLookup, reportProcs, hotStarts, coldStarts);
         	generateTrips (false);
 		t1 = clock();
         	runSharedAV (false,false,i,true);// timeTripCounts,  maxTrav, maxTravCongested,  dwLookup, zoneSharesL, zoneSharesS, maxCarUse, maxCarOcc, totDist, unoccDist, waitT,
@@ -1800,7 +1800,7 @@ void Simulator::runSharedAV (bool warmStart, bool lastWarm, int iter, bool check
 	for (int x=0; x<xMax; x++){
 		for (int y=0; y<yMax; y++){
 			for (int c=0; c<CarMx[x][y].size(); c++){
-				if (CarMx[x][y][c].numRejects > numRejectsToRefuel && !CarMx[x][y][c].inUse && CarMx[x][y][c].gas < (rangePercentToRefuel * carRange))
+				if (CarMx[x][y][c].numRejects > numRejectsToRefuel && !CarMx[x][y][c].inUse && CarMx[x][y][c].gas < (rangePercentToRefuel * carRange) || (!CarMx[x][y][c].inUse && CarMx[x][y][c].gas < 40))
 				{
 //                                        CarMx[x][y][c].refuel = refuelTime;
                                         CarMx[x][y][c].destX = x;
@@ -2165,7 +2165,7 @@ void Simulator::runSharedAV (bool warmStart, bool lastWarm, int iter, bool check
 }
 
 // resets all variables for the daily run, now that we know how many cars there will be
-void Simulator::placeInitCars ()//int* timeTripCounts, double* maxCarUse, double* maxCarOcc, int& totDist,
+void Simulator::placeInitCars (int run)//int* timeTripCounts, double* maxCarUse, double* maxCarOcc, int& totDist,
 //                    int& unoccDist, int& waitT, double dwLookup [][288], bool reportProcs, int& hotStarts, int& coldStarts)
 {
 //    int dx, dy;
@@ -2203,7 +2203,7 @@ void Simulator::placeInitCars ()//int* timeTripCounts, double* maxCarUse, double
             for (int c = 0; c < CarMx[x][y].size(); c++)
             {
 
-		if (!CarMx[x][y][c].inUse){ // cars that aren't assigned or charging
+		if (!CarMx[x][y][c].inUse || run == 1){ // cars that aren't assigned or charging
 	                CarMx[x][y][c].inUse = false;
 	                CarMx[x][y][c].pickupX = -1;
         	        CarMx[x][y][c].pickupY = -1;
@@ -8684,7 +8684,7 @@ void Simulator::moveCar (int x, int y, int c, int t, int maxTrav, int& totDist, 
 //        trav = trav - abs(tCar.pickupX - tCar.x) - abs(tCar.pickupY - tCar.y);
 //        tCar.x = tCar.pickupX;
 //        tCar.y = tCar.pickupY;
-	if (tCar.pickupX != tCar.x && trav > 0)
+	if (tCar.pickupX != tCar.x && trav > 0 && tCar.pickupX != -1)
         {
 
                 if (trav >= abs(tCar.pickupX - tCar.x))
@@ -8710,7 +8710,7 @@ void Simulator::moveCar (int x, int y, int c, int t, int maxTrav, int& totDist, 
         }
 
         // move the car in the y direction
-        if (tCar.pickupY != tCar.y && trav > 0)
+        if (tCar.pickupY != tCar.y && trav > 0 && tCar.pickupY != -1)
         {
                 if (trav >= abs(tCar.pickupY - tCar.y))
                 {
@@ -11467,11 +11467,20 @@ void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int tra
 	int trueTrav;
 	double x;
 	int tripsLeft = 1;
+        int searchRadius = trav;
 
 	if (!limitGreedySearch && !warmstart)
-		trav = xMax;
+		searchRadius = xMax;
 
-        for (int d = 0; d < trav && tripsLeft > 0; d++)
+    int carCt=0, tripCt = tripList.size();
+    for (int x=0;x<xMax;x++)
+      for(int y=0; y<yMax; y++)
+        for (int c=0; c<CarMx[x][y].size(); c++)
+          if (!CarMx[x][y][c].inUse)
+            carCt ++;
+
+
+        for (int d = 0; d < searchRadius && tripsLeft > 0; d++)
         {
 		tripsLeft = 0;
                 if (time % 2 == 0){
@@ -11486,7 +11495,7 @@ void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int tra
 					}
 					else
 						x = 1;
-					for (int j = (int)(d*x); j < (1+d)*x; j++)
+					for (int j = (int)(d*x); j < (1+d)*x && tripList[i].carlink == false; j++)
 	                                        findNearestCar(tripList[i],  j, trav,  reportProcs, nw, ne, se, sw, coldStarts, hotStarts, run, checkStationDistance);
                                 }
 				if (tripList[i].carlink == false && tripList[i].modeOfTransit == 2)
@@ -11506,7 +11515,7 @@ void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int tra
 						x = (1.0 * trueTrav) / (trav);
 					} else
 						x = 1;
-					for (int j = (int)(d*x); j < (1+d)*x; j++)
+					for (int j = (int)(d*x); j < (1+d)*x && tripList[i].carlink == false; j++)
 	                                        findNearestCar(tripList[i],  j, trav, reportProcs, nw, ne, se, sw, coldStarts, hotStarts, run, checkStationDistance);
 		                }
 				if (tripList[i].carlink == false && tripList[i].modeOfTransit == 2)
@@ -11516,11 +11525,28 @@ void Simulator::matchTripsToCarsGreedy(vector<Trip> &tripList, int time, int tra
 
                 }
         }
+
+    int carCt2 = 0;
+    for (int x=0;x<xMax;x++)
+      for(int y=0; y<yMax; y++)
+        for (int c=0; c<CarMx[x][y].size(); c++)
+          if (!CarMx[x][y][c].inUse)
+            carCt2 ++;
+//    cout << "Time: " << time << " cars: " << carCt << " trips: " << tripCt << " new cars: " << carCt2 <<endl;
+
 	
 }
 
 void Simulator::matchTripsToCarsDecentralized(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts, int run, bool checkStationDistance, bool warmstart)
 {
+
+    int carCt=0, tripCt = tripList.size();
+    for (int x=0;x<xMax;x++)
+      for(int y=0; y<yMax; y++)
+        for (int c=0; c<CarMx[x][y].size(); c++)
+          if (!CarMx[x][y][c].inUse)
+            carCt ++;
+
     vector<int> xvect;
     for (int x = 0; x < tripList.size(); x++)
     {
@@ -11535,6 +11561,13 @@ void Simulator::matchTripsToCarsDecentralized(vector<Trip> &tripList, int time, 
         }
       }
     }	
+    int carCt2 = 0;
+    for (int x=0;x<xMax;x++)
+      for(int y=0; y<yMax; y++)
+        for (int c=0; c<CarMx[x][y].size(); c++)
+          if (!CarMx[x][y][c].inUse)
+            carCt2 ++;
+//    cout << "Time: " << time << " cars: " << carCt << " trips: " << tripCt << " new cars: " << carCt2 <<endl;
 
 }
 
@@ -11639,23 +11672,24 @@ void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav
                 trip = (*it).second.second;
                 waitTrav = abs(cars[carIndex]->x - tripList[trip].startX) + abs(cars[carIndex]->y - tripList[trip].startY);
 
-		if (waitTrav <= trav){
+//		if (waitTrav <= trav){
 
-	                assignCar(cars[carIndex], &tripList[trip]);
-			cars[carIndex]->currTrip = &tripList[trip];
+                assignCar(cars[carIndex], &tripList[trip]);
+		cars[carIndex]->currTrip = &tripList[trip];
 
-                	tripList[trip].carlink = true;
+               	tripList[trip].carlink = true;
                 	//waitTrav = abs(cars[carIndex]->x - tripList[trip].startX) + abs(cars[carIndex]->y - tripList[trip].startY);
-			if (waitTrav > trav)
-				cout << "Exceeding max travel: "<<waitTrav <<" "<<trav<<endl;
+//		if (waitTrav > trav)
+//			cout << "Exceeding max travel: "<<waitTrav <<" "<<trav<<endl;
 
-	                tripList[trip].waitTime = tripList[trip].waitTime + (5.0 * waitTrav / trav);
-        	        if (tripList[trip].waitPtr != NULL){
-                	        tripList[trip].waitPtr -> waitTime = tripList[trip].waitTime;
-				tripList[trip].waitPtr -> carlink = true;
-				cars[carIndex]->currTrip = tripList[trip].waitPtr;
-			}
+                tripList[trip].waitTime = tripList[trip].waitTime + (5.0 * waitTrav / trav);
+       	        if (tripList[trip].waitPtr != NULL){
+               	        tripList[trip].waitPtr -> waitTime = tripList[trip].waitTime;
+			tripList[trip].waitPtr -> carlink = true;
+			cars[carIndex]->currTrip = tripList[trip].waitPtr;
 		}
+//		} else {cout << "Trip didn't get car" << endl;}
+
         }
 //	for (int i=0; i<reassigned.size(); i++)
 //	{
