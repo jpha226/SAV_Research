@@ -78,7 +78,7 @@ using namespace std;
 
 
 // Begin Program **************************************************************************************************
-Simulator::Simulator(int fleet_size)
+Simulator::Simulator(int fleet_size, int seed, char* inputFile)
 {
 	// Grid variables
 	xMax = 40;
@@ -106,11 +106,15 @@ Simulator::Simulator(int fleet_size)
 	fleetSizeLimit = fleet_size;
 	limitFleetSize = false;
 
+	rseed = seed;
+
 	// Pricing variables
 	base_price = 0.85 * cellSize;
 	saev_vott = 0.35;
 //	string inputFile = "input.txt";
-        loadParameters("input.txt");
+        loadParameters(inputFile);
+          
+	cout << "Seed: " << rseed << endl;
 	base_price += cellSize;
 	cout << xMax << " " << yMax << endl;
 	// Initialize grid structures for the map
@@ -141,7 +145,7 @@ Simulator::Simulator(int fleet_size)
 	loadTripRateData("AustinTripRates.csv","AustinCellMap.csv");	
 }
 
-Simulator::Simulator(){ Simulator(10000000);}
+Simulator::Simulator(){ Simulator(10000000, 0, "input.txt");}
 
 Simulator::~Simulator()
 {
@@ -518,7 +522,7 @@ void Simulator::initVars (int runNum, bool warmStart, bool checkStationDistance)
     if (runNum == 1)
     {
 	cout <<"Seed"<<endl;
-	srand(time(NULL));//rseed);
+	srand(rseed);
 	if (!warmStart){
 		random_seeds.clear();
 		for (int i = 0; i < numRuns; i++)
@@ -553,7 +557,7 @@ void Simulator::initVars (int runNum, bool warmStart, bool checkStationDistance)
     if (!warmStart)
 	srand(random_seeds[runNum]);
     if(!warmStart && runNum ==1)
-	srand(randomSeed);
+	srand(rseed);
 
     //fclose(inputfile);
 
@@ -628,16 +632,19 @@ void Simulator::initVars (int runNum, bool warmStart, bool checkStationDistance)
     return;
 }
 
-void Simulator::loadParameters(char* input)
+bool Simulator::loadParameters(char* input)
 {
-
    FILE* inputfile;
    inputfile = fopen(input, "r");
+   if (inputfile == NULL){
+     cout << "Could not open "<<input<<endl;
+     return false;
+   }
    double inputVal = -1.0;
    char* varStr;
    char* valStr;
    char instring [80];
-   rseed = 0;
+   //rseed = 0;
    readName = new char[20];
    char comment;
 
@@ -770,7 +777,7 @@ void Simulator::loadParameters(char* input)
 
         }
     }
-
+    return true;
 }
 
 void Simulator::printParameters()
@@ -11535,7 +11542,6 @@ void Simulator::matchTripsToCarsDecentralized(vector<Trip> &tripList, int time, 
         }
       }
     }	
-
 }
 
 void Simulator::matchTripsToCarsScram(vector<Trip> &tripList, int time, int trav, bool reportProcs, int &nw, int &ne, int &se, int &sw, int &coldStarts, int &hotStarts)

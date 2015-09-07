@@ -3,7 +3,7 @@ CC = g++
 CFLAGS = -g 
 
 simulator: main.o simulator.o matching.o
-	${CC} ${CFLAGS} main.o simulator.o matching.o -o simulator
+	${CC} ${CFLAGS} main.o simulator.o matching.o -o sim
 
 main.o: main.cpp simulator.o
 	${CC} ${CFLAGS} -c main.cpp -o main.o

@@ -308,10 +308,10 @@ class Simulator{
 
 	public:
 		Simulator();
-		Simulator(int fleet_size);
+		Simulator(int fleet_size, int seed, char* inputFile);
 		~Simulator();
 
-		void loadParameters(char* input);
+		bool loadParameters(char* input);
                 void printParameters();
 		void loadTripRateData(char* rateData, char* cellMap);
 		void initVars (int runNum, bool warmStart, bool checkStationDistance);
