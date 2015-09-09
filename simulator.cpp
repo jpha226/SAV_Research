@@ -2382,6 +2382,21 @@ void Simulator::reportResults (int runNum)//int* timeTripCounts, double* maxCarU
         }
     }
 
+    // Get variance for trip wait time
+    double variance = 0.0;
+    
+    for (int t=0; t<288; t++)
+    {
+      for (int trp = 0; trp < TTMx[t].size(); trp++)
+      {
+        if (TTMx[t][trp].carlink) {
+          variance += ((avgWait/servedT) - TTMx[t][trp].waitTime) * ((avgWait/servedT) - TTMx[t][trp].waitTime);
+        }
+      }
+    }
+   
+    variance /= servedT;
+
     // Get Charge Stats
     double chargeDist=0.0;
     double chargeTime=0.0;
@@ -2455,6 +2470,7 @@ void Simulator::reportResults (int runNum)//int* timeTripCounts, double* maxCarU
 //    cout << "5-minute traveler wait time intervals elapsed " << waitCount << endl;
 //    cout << "Total number of trips reassigned "<< tripsReassigned << endl;
     cout << "Average wait time " << avgWait << endl;
+    cout << "Wait variance for trips " << variance << endl;
     cout << "Total miles traveled " << totDist * cellSize << endl;
     cout << "Total unoccupied miles traveled " << unoccDist * cellSize << endl;
     cout << "Total reallocation miles traveled " << reallocDist * cellSize << endl;
