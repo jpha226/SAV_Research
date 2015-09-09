@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2014.12.30)  8 SEP 2015 02:30
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2014.12.30)  8 SEP 2015 23:36
 entering extended mode
  %&-line parsing enabled.
 **CarSharingScram.tex
@@ -298,102 +298,138 @@ File: pgfmodulematrix.code.tex 2010/08/24  (rcs-revision 1.4)
 (/usr/share/texmf/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarytopat
 hs.code.tex
 File: tikzlibrarytopaths.code.tex 2008/06/17 v2.10 (rcs-revision 1.2)
-))) (/usr/share/texmf-texlive/tex/latex/caption/subcaption.sty
+))) (/usr/share/texmf-texlive/tex/latex/caption/caption.sty
+Package: caption 2009/10/09 v3.1k Customizing captions (AR)
+
+(/usr/share/texmf-texlive/tex/latex/caption/caption3.sty
+Package: caption3 2009/10/09 v3.1k caption3 kernel (AR)
+\captionmargin=\dimen148
+\captionmargin@=\dimen149
+\captionwidth=\dimen150
+\caption@indent=\dimen151
+\caption@parindent=\dimen152
+\caption@hangindent=\dimen153
+)
+\c@ContinuedFloat=\count107
+)
+(/usr/share/texmf-texlive/tex/latex/caption/subcaption.sty
 Package: subcaption 2008/08/31 v1.0b Adding subcaptions (AR)
-
-
-! Package subcaption Error: `caption' package not loaded
-(subcaption)                (which is needed by this package)
-
-See the subcaption package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.38   \endinput}{}
-                   
-If you do not understand this error, please take a closer look
-at the documentation of the `subcaption' package.
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-) (./CarSharingScram.aux)
+\c@subfigure=\count108
+\c@subtable=\count109
+)
+(./CarSharingScram.aux)
 \openout1 = `CarSharingScram.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 16.
-LaTeX Font Info:    ... okay on input line 16.
-LaTeX Font Info:    Try loading font information for OT1+ptm on input line 16.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 17.
+LaTeX Font Info:    ... okay on input line 17.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 17.
+LaTeX Font Info:    ... okay on input line 17.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 17.
+LaTeX Font Info:    ... okay on input line 17.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 17.
+LaTeX Font Info:    ... okay on input line 17.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 17.
+LaTeX Font Info:    ... okay on input line 17.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 17.
+LaTeX Font Info:    ... okay on input line 17.
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 17.
  (/usr/share/texmf-texlive/tex/latex/psnfss/ot1ptm.fd
 File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
-) ABD: EveryShipout initializing macros
+)
+ABD: EveryShipout initializing macros
 (/usr/share/texmf-texlive/tex/context/base/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count107
-\scratchdimen=\dimen148
+\scratchcounter=\count110
+\scratchdimen=\dimen154
 \scratchbox=\box35
-\nofMPsegments=\count108
-\nofMParguments=\count109
+\nofMPsegments=\count111
+\nofMParguments=\count112
 \everyMPshowfont=\toks24
-\MPscratchCnt=\count110
-\MPscratchDim=\dimen149
-\MPnumerator=\count111
+\MPscratchCnt=\count113
+\MPscratchDim=\dimen155
+\MPnumerator=\count114
 \everyMPtoPDFconversion=\toks25
 )
+Package caption Info: Begin \AtBeginDocument code.
+Package caption Info: End \AtBeginDocument code.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <14.4> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 22.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 23.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <7> on input line 22.
+(Font)              <7> on input line 23.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <5> on input line 22.
+(Font)              <5> on input line 23.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 22.
-LaTeX Font Info:    Try loading font information for OMS+ptm on input line 22.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 23.
+LaTeX Font Info:    Try loading font information for OMS+ptm on input line 23.
  (/usr/share/texmf-texlive/tex/latex/psnfss/omsptm.fd
 File: omsptm.fd 
 )
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <9> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 22.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 23.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 23.
- [1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 24.
+
+Underfull \hbox (badness 1383) in paragraph at lines 33--34
+\OT1/ptm/m/n/10 Autonomous ve-hi-cle tech-nol-ogy is be-com-ing a re-al-ity.
+ []
+
+[1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}
 
 
 
 ]
-Underfull \hbox (badness 1590) in paragraph at lines 95--96
+
+Package caption Warning: \label before \caption on input line 89.
+See the caption package documentation for explanation.
+
+
+LaTeX Warning: Reference `exampleFigure' on page 2 undefined on input line 96.
+
+
+Underfull \vbox (badness 3919) has occurred while \output is active []
+
+
+
+Package caption Warning: \label before \caption on input line 89.
+See the caption package documentation for explanation.
+
+
+LaTeX Warning: Reference `exampleFigure' on page 2 undefined on input line 100.
+
+
+
+Underfull \hbox (badness 1590) in paragraph at lines 105--106
  \OT1/ptm/b/n/10 Hun-gar-ian Al-go-rithm \OT1/ptm/m/n/10 A nat-u-ral im-prove-m
 ent is the
  []
 
-(./CarSharingScram.bbl [2]) [3
+[2] (./CarSharingScram.bbl) [3
 
-] (./CarSharingScram.aux) ) 
+] (./CarSharingScram.aux)
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ ) 
 Here is how much of TeX's memory you used:
- 9319 strings out of 495061
- 178374 string characters out of 1182620
- 220204 words of memory out of 3000000
- 12327 multiletter control sequences out of 15000+50000
+ 10305 strings out of 495061
+ 195718 string characters out of 1182620
+ 250485 words of memory out of 3000000
+ 13309 multiletter control sequences out of 15000+50000
  14641 words of font info for 29 fonts, out of 3000000 for 9000
  28 hyphenation exceptions out of 8191
- 56i,11n,55p,995b,532s stack positions out of 5000i,500n,10000p,200000b,50000s
-{/usr/share/texmf-texlive/fonts/enc/dvips/base/8r.en
-c}</usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/sha
-re/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texmf-tex
-live/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share/texmf-texlive/fonts/ty
-pe1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-texlive/fonts/type1/public/
-amsfonts/cm/cmsy9.pfb></usr/share/texmf-texlive/fonts/type1/urw/times/utmb8a.pf
-b></usr/share/texmf-texlive/fonts/type1/urw/times/utmr8a.pfb></usr/share/texmf-
-texlive/fonts/type1/urw/times/utmri8a.pfb>
-Output written on CarSharingScram.pdf (3 pages, 96594 bytes).
+ 56i,11n,55p,995b,553s stack positions out of 5000i,500n,10000p,200000b,50000s
+{/usr/share/texmf-texlive/fonts/enc/dvips/base/8r.enc}</usr/share/texmf-texli
+ve/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texmf-texlive/fonts/ty
+pe1/public/amsfonts/cm/cmr10.pfb></usr/share/texmf-texlive/fonts/type1/public/a
+msfonts/cm/cmr7.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cm
+sy10.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmsy9.pfb></u
+sr/share/texmf-texlive/fonts/type1/urw/times/utmb8a.pfb></usr/share/texmf-texli
+ve/fonts/type1/urw/times/utmr8a.pfb></usr/share/texmf-texlive/fonts/type1/urw/t
+imes/utmri8a.pfb>
+Output written on CarSharingScram.pdf (3 pages, 98943 bytes).
 PDF statistics:
  48 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
