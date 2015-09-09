@@ -4,31 +4,42 @@
 \usepackage{helvet}
 \usepackage{courier}
 \usepackage{tikz}
+\usepackage{caption}
+\usepackage{subcaption}
+
 
 \setlength{\pdfpagewidth}{8.5in}
 \setlength{\pdfpageheight}{11in}
 \pdfinfo{
 /Title (SCRAM Applied to Car Sharing)
-/Author (Josiah Hanna, Peter Stone)}
+/Author (Anonymous)}
 \setcounter{secnumdepth}{0}  
 \begin{document}
 % The file aaai.sty is the style file for AAAI Press 
 % proceedings, working notes, and technical reports.
 %
 \title{Scram Applied to Car Sharing}
-\author{}
+\author{Anonymous}
 \maketitle
 \begin{abstract}
 \begin{quote}
-Carsharing programs provide an alternative to private vehicle ownership. Autonomous vehicles have the capability to remove many issues with carsharing programs by increasing user access to vehicles. Autonomous vehicles would be able to come directly to users and drop them off at any location. While the ability to do this would be significant for carsharing programs it could lead to inefficiencies if the assignment of cars to users is not done in a smart way. In this paper we consider car sharing with autonomous vehicles as an assignment problem and consider different methods for matching cars to users to meet different criteria. Our results also highlight some of the problems with greedy or decentralized approaches.
+Carsharing programs are springing up in many major cities. These programs provide an alternative to private vehicle ownership. While they have seen growth there are still obstacles to wide scale adoption. Autonomous vehicles would be able to improve user access to vehicles and remove one of the main challenges these programs face. While the ability to easily move cars to meet demand would be significant for carsharing programs it could lead to worse system performance if the assignment of cars to users is not done in an intelligent way. In this paper we consider car sharing with autonomous vehicles as an assignment problem and examine different methods for matching cars to users to meet different criteria. We show how applying a recent algorithm for minimizing the maximal edge in a perfect matching can result in a more efficient carsharing system. Our results also highlight some of the problems with greedy or decentralized approaches.
 \end{quote}
 \end{abstract}
 
 \noindent 
 
 \section{Introduction}
-Carsharing is a transportation service where users can access a personal vehicle when desired without the need to own a private vehicle. Current systems such as Car2Go or ZipCar have car parking spots scattered throughout the city. Users can find a car near them, use it, and then return it to any of the available parking spots. 
+Autonomous vehicle technology is becoming a reality. Driverless cars have the potential to make travel safer, increase fuel economy, and reduce pollution (need citation). However the potential of this technology does not have to be limited to a new way to move people from point A to point B. Autonomous vehicles have the potential to revolutionize modern transportation systems (cite some AIM related work). One such system is carsharing.
 
+Carsharing is a transportation service where users can access a personal vehicle when desired without the need to own a private vehicle. Users reserve vehicles which they can then use as a private vehicle. Service begins at designated car parking spots and must end at one of these spots. Current systems such as Car2Go or ZipCar have car parking spots scattered throughout the city to give users flexibility in trip origin and destinations. One problem with current systems is that vehicles may be moved from high demand to low demand areas. Then the vehicle is likely to remain unused for a long time before being used again. Additionally, users may not desire to walk to an access point or walk from a dropoff location to their final destination. Both of these problems have hindered the growth of carsharing programs.
+
+Autonomous vehicles offer a promising solution to these problems. An autonomous vehicle can meet a user at a requested position and drop them off at the user's desired destination. When not in use, the vehicle can move to other users or strategically relocate to an area with high demand \cite{fagnant2014travel}. Driverless cars can remain in service at all times (except for service or refueling) so the carsharing fleet remains close to full size throughout the day. And automated communication between cars can allow for coordination to improve system performance. This paper considers coordinating the assignment of vehicles to users to improve the system performance.
+
+For an autonomous carsharing system to be used it needs to provide users service in a reasonable amount of time after they request a ride. It should also not give some users fast service at the expense of long waits for others. Miles traveled without passengers in the vehicle should be minimized as they are not directly serving trips but still contribute to pollution and add fuel costs. And the system must be reliable so we want all trips to be served.
+
+
+While the experiments in this paper use a model of carsharing with autonomous vehicles, they may extend to a fleet of taxi cabs or ridesharing systems such as Uber or Lyft.
 
 We seek to improve the performance of a fleet of shared autonomous vehicles through improved matching of vehicles to passengers requesting rides. 
 
@@ -61,20 +72,23 @@ Using the described carsharing model we want to determine how the assignment of 
 \node at (-0.75,+0.75) {C};
 \node at (-0.75,-0.75) {T};
 \node at (+0.25,-0.75) {C};
-
+\draw (-0.25,-0.75) ellipse (8mm and 3mm);
+\draw[rotate=-45] (0,0) ellipse (14mm and 3mm);
 \node at (+0.75,-0.75) {T};
 \end{tikzpicture}
+
 \hspace{2mm}
 \begin{tikzpicture}
 \draw[step=0.5cm,color=gray] (-1,-1) grid (1.5,1);
 \node at (-0.75,+0.75) {C};
 \node at (-0.75,-0.75) {T};
 \node at (+0.25,-0.75) {C};
-
+\draw (-0.25,-0.75) ellipse (8mm and 3mm);
+\draw[rotate=-37] (0.25,0.1) ellipse (16mm and 4mm);
 \node at (+1.25,-0.75) {T};
 \end{tikzpicture}
 \label{exampleFigure}
-\caption{These small examples show the shortcomings of the various matching algorithms discussed in this paper.}
+\caption{These small examples show the shortcomings of the various matching algorithms discussed in this paper. In the first example}
 \end{figure}
 
 \paragraph{Decentralized Greedy Matching}
