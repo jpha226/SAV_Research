@@ -6,6 +6,11 @@
 \usepackage{tikz}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{pgfplots}
+
+\pgfplotsset{width=10cm,compat=1.9}
+\usepgfplotslibrary{external}
+\usetikzlibrary{patterns}
 
 
 \setlength{\pdfpagewidth}{8.5in}
@@ -107,12 +112,173 @@ A natural improvement is the Hungarian algorithm \cite{kuhn1955hungarian} which 
 The Hungarian algorithm produces a minimum cost perfect matching but the optimal solution does not consider fairness of the system. In our scenario this equates to the possibility that some trips have a much longer wait time even though the total wait across all trips is minimized. To improve on this we use a scalable collision-avoiding role assignment with minimal-makespan (SCRAM) algorithm to find an assignment that minimizes the longest distance that any vehicle must travel to a passenger. Specifically we implement the Minimum Maximal Distance + Minimum Sum Distance$^2$ (MMD+MSD$^2$) proposed in \cite{macalpine2015scram}. Given a bipartite graph, $G = ({S,T},E)$  this algorithm first finds the minimum maximal edge in a perfect matching from $S$ to $T$. Then edges in $E$ with length larger than this edge are removed from the edge set. Finally, the Hungarian algorithm is ran on this reduced set of edges to find the minimum cost matching.  
 
 \section{Experimental Setup}
-To compare different approaches we run two sets of experiments. The first set of experiments compares the performance of the above algorithms over 100 consecutive days of fleet use. Since each the events of each day affect the next, multiple days are needed to get an idea of system performance. In these experiments the fleet size is set to 1000 vehicles which was experimentally found to be able to serve all users with any method of assignment. We run 50 trials of 100 days each for each method of assignment.
+To compare different approaches we run two sets of experiments. The first set of experiments compares the performance of the above algorithms over 100 consecutive days of fleet use. Since each the events of each day affect the next, multiple days are needed to get an idea of system performance. In these experiments the fleet size is set to 1000 vehicles which was experimentally found to be able to serve all users with any method of assignment. It is important that all trips be served in order to make meaningful comparisons. This is because an assignment strategy could reduce average wait time by simply not serving passengers that would have to wait a long time. We run 50 trials of 100 days each for each method of assignment.
 
-The second set of experiments compares the sensitivity of different methods to fleet size. Starting at a fleet size of 500 vehicles, fleet size is increased in increments of 100 and each method is ran for 50 days.
+The second set of experiments compares the ability of different methods to serve trips with different fleet size. Starting at a fleet size of 500 vehicles, fleet size is increased in increments of 100 and each method is ran for 100 days with each fleet size.
 
 \section{Results}
 
+This section presents and discusses the experimental results. Statistical significance is computed using a t-test for all results.
+
+\subsection{Unoccupied Miles Traveled}
+
+\begin{figure}
+\resizebox {\columnwidth} {!} {
+\begin{tikzpicture}
+\begin{axis}[
+	x tick label style={
+	/pgf/number format/1000 sep=},
+	ylabel=Average Unoccupied Distance (miles per day),
+	symbolic x coords={0,Decentralized,Greedy,Hungarian,SCRAM},
+    xtick=data,
+    enlarge y limits=0.01,
+	enlarge x limits=0.15,
+	legend style={at={(0.5,-0.1)},
+	anchor=north,legend columns=-1},
+    ybar = 3pt,
+    bar width=20pt
+]
+\addplot [fill=blue,error bars/.cd, y dir=both, y explicit,]
+	coordinates {(Decentralized,18524.0803) += (0,31.4938344758) -= (0,31.4938344758) (Greedy,15479.34128) += (0,13.6964034878) -= (0,13.6964034878)
+		 (SCRAM,14605.7718336) += (0,15.4548969092) -= (0,15.4548969092) (Hungarian,14344.3014) += (0,14.9256398871) -= (0,14.9256398871)};
+
+\end{axis}
+\end{tikzpicture}
+}
+\label{unoccupiedGraph}
+\caption{This bar graph shows how different assignment methods result in different amounts of unoccupied travel. Error bars are for a 95$\%$ confidence level.}
+\end{figure}
+
+\subsection{Passenger Wait Time}
+
+\begin{figure}
+\resizebox {\columnwidth} {!} {
+\begin{tikzpicture}
+\begin{axis}[
+	x tick label style={
+	/pgf/number format/1000 sep=},
+	ylabel=Average Wait Time Variance,
+	symbolic x coords={0,Decentralized,Greedy,Hungarian,SCRAM},
+    xtick=data,
+    enlarge y limits=0.01,
+	enlarge x limits=0.15,
+	legend style={at={(0.5,-0.1)},
+	anchor=north,legend columns=-1},
+%	ybar interval=0.5,
+    ybar = 3pt,
+    bar width=20pt
+]
+\addplot [fill=red, error bars/.cd, y dir=both, y explicit,]
+	coordinates {(Decentralized,0) += (0,0) -= (0,0) (Greedy,0)
+		 (SCRAM,0) (Hungarian,0)};
+
+\end{axis}
+\end{tikzpicture}
+}
+\label{unoccupiedGraph}
+\caption{This bar graph shows how different assignment methods result in different amounts of variance within travel time. Error bars are for a 95$\%$ confidence level.}
+\end{figure}
+
+\begin{figure}
+\resizebox {\columnwidth} {!} {
+\begin{tikzpicture}
+\begin{axis}[
+%	x tick label style={
+%	/pgf/string format/1000 sep=0pt anchor=east shift=-4pt},
+	ylabel=Number of passengers,
+	symbolic x coords={0,Five,Ten,Fifteen,D},
+    xtick=data,
+    enlarge y limits=0.01,
+	enlarge x limits=0.15,
+	legend style={at={(0.5,-0.1)},
+	anchor=north,legend columns=-1},
+%	ybar interval=0.7,
+    ybar = 1pt,
+    bar width=15pt
+]
+%Decentralized
+\addplot [pattern=north east lines,error bars/.cd, y dir=both, y explicit,]
+	coordinates {(Five,2071.4542) += (0,14.3062459029) -= (0,14.3062459029) (Ten,390.5364) += (0,3.1325882223) -= (0,3.1325882223)
+		 (Fifteen,130.0746) += (0,1.5169568583) -= (0,1.5169568583)};
+
+%Greedy
+\addplot [pattern=dots, error bars/.cd, y dir=both, y explicit,]
+	coordinates {(Five,1623.7748) += (0,4.4938187306) -= (0,4.4938187306) (Ten,353.9534) += (0,1.8198260124) -= (0,1.8198260124)
+		 (Fifteen,78.5602) += (0,0.7429254263) -= (0,0.7429254263)};
+
+%Hungarian		 
+\addplot [pattern=crosshatch, error bars/.cd, y dir=both, y explicit,]
+	coordinates {(Five,974.4834) += (0,3.9463704624) -= (0,3.9463704624) (Ten,118.404) += (0,0.95148793) -= (0,0.95148793)
+		 (Fifteen,24.9586) += (0,0.4115085269) -= (0,0.4115085269)};
+
+%SCRAM		 
+\addplot [pattern=north west lines,error bars/.cd, y dir=both, y explicit,]
+	coordinates {(Five,840.765467247) += (0,4.5148281834) -= (0,4.5148281834) (Ten,26.095930545) += (0,0.5505090487) -= (0,0.5505090487)
+		 (Fifteen,4.8304617135) += (0,0.1088751011) -= (0,0.1088751011)};
+
+\end{axis}
+\end{tikzpicture}
+}
+\label{unoccupiedGraph}
+\caption{This bar graph shows how different algorithms can match more of the trips sooner. Error bars are for a 95$\%$ confidence level.}
+\end{figure}
+
+\subsection{Sensitivity of Methods to Fleet Size}
+
+\begin{figure}
+\resizebox {\columnwidth} {!} {
+\begin{tikzpicture}
+\begin{axis}[
+	xlabel=Fleet Size,
+	ylabel=Number of Unserved Trips]
+\addplot[color=blue,mark=x, error bars/.cd, y dir=both, y explicit,] coordinates {
+	(500,    100)
+	(600,   90)
+	(700,   80)
+	(800,  70)
+	(900,  60)
+	(1000,  50)
+};
+
+\addplot[color=blue,mark=x,error bars/.cd, y dir=both, y explicit,] coordinates {
+	(500,    90)
+	(600,   80)
+	(700,   70)
+	(800,  60)
+	(900,  50)
+	(1000,  40)
+};
+
+\addplot[color=red,mark=*,error bars/.cd, y dir=both, y explicit,] coordinates {
+	(500,    80)
+	(600,   70)
+	(700,   60)
+	(800,  50)
+	(900,  40)
+	(1000,  30)
+};
+
+\addplot[color=red,mark=*,error bars/.cd, y dir=both, y explicit,] coordinates {
+	(500,    70)
+	(600,   60)
+	(700,   50)
+	(800,  40)
+	(900,  30)
+	(1000,  20)
+};
+	
+
+\legend{Decentralized, Greedy, Hungarian, SCRAM}
+\end{axis}
+\end{tikzpicture}
+}
+\end{figure}
+
+\section{Conclusion and Future Work}
+
+We have presented a comparison of different methods for assigning vehicles to users for a carsharing system using autonomous vehicles. Our experiments show that employing an optimal perfect matching algorithm can improve performance of a system in terms of wasted travel and customer service.
+
+The current approach is short sighted in that it only considers vehicles available at the time of assignment. Any of the assignment methods could be adapted to consider vehicles that will soon be available. This could be done by representing the vehicles distance to a passenger as the distance from the passenger to the vehicle destination plus the vehicles remaining distance to travel. In situations where the fleet size is limited this could allow the system to directly tell users if it will be possible to serve them and how long they have to wait. Another potential direction is ridesharing which may reduce to a vehicle routing problem.
 
 \bibliography{CarSharing}
 \bibliographystyle{aaai}
