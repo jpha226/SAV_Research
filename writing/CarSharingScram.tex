@@ -6,11 +6,11 @@
 \usepackage{tikz}
 \usepackage{caption}
 \usepackage{subcaption}
-%\usepackage{pgfplots}
+\usepackage{pgfplots}
 
-%\pgfplotsset{width=10cm,compat=1.9}
-%\usepgfplotslibrary{external}
-%\usetikzlibrary{patterns}
+\pgfplotsset{width=10cm,compat=1.9}
+\usepgfplotslibrary{external}
+\usetikzlibrary{patterns}
 %\tikzexternalize
 %\listfiles
 
@@ -18,14 +18,14 @@
 \setlength{\pdfpagewidth}{8.5in}
 \setlength{\pdfpageheight}{11in}
 \pdfinfo{
-/Title (Minimal Matching for an Autonomous Car Sharing System)
+/Title (Minimum Cost Matching for an Autonomous Car Sharing System)
 /Author (Anonymous)}
 \setcounter{secnumdepth}{0}  
 \begin{document}
 % The file aaai.sty is the style file for AAAI Press 
 % proceedings, working notes, and technical reports.
 %
-\title{On Optimizing the User-Vehicle Assignment for an Autonomous Car Sharing System}
+\title{Minimum Cost Matching for an Autonomous Car Sharing System}
 \author{Anonymous}
 \maketitle
 \begin{abstract}
@@ -54,7 +54,7 @@ This paper is laid out as follows: Section 1 describes the agent-based model we 
 For experiments we use the agent-based car sharing model proposed by Fagnant and Kockelman \cite{fagnant2014travel}. This model represents a 10 mile by 10 mile city as a grid of 0.25 mile by 0.25 mile grid cells. Vehicles can can move north, south, east, or west to adjacent cells. Motion within the cells is not modeled. Diagonal motion is not permitted and cars do not interfere with each other's path. Time is discretized into five minute intervals for a total of 288 time steps per day. Each run of the simulation corresponds to one 24 hour day.
 
 % Trip Generation
-Users requesting trips are generated in each grid cell according to a rate that decreases the farther a cell is from the city center. This rate is the mean for a Poisson process from which a number of trips is drawn for the corresponding cell. The distance and start time for each trip is drawn from a distribution based on U.S. National Highway Traffic Safety Administration trip distance data. While all trips for the day are generated at the start of the run, requests for rides are not made until the start time of the trip. 
+Users requesting trips are generated in each grid cell at a rate that decreases the farther a cell is from the city center. This means that the center of the city is an area with high trip density and the density falls off towards the edges of the map. Full details on the process can be found in \cite{fagnant2014travel}. The distance and start time for each trip is drawn from a distribution based on U.S. National Highway Traffic Safety Administration trip distance data. While all trips for the day are generated at the start of the run, requests for rides are not made until the start time of the trip. 
 
 % Simulation Cycle
 At each time step available vehicles are matched to users requesting trips. If a user cannot be served they are added to a wait list and can request a ride again at the next time step. If a user cannot be served after 30 minutes of wait time the trip is considered unserved. Vehicles that could not serve trips because they were low on fuel go to the nearest fueling station (assumed to be within the same grid cell) and are out of service for two time steps (10 minutes). Then vehicles move to the passengers. Vehicles already with passengers proceed to their trip destination. Each vehicle can move a fixed number of grid cells depending on the current maximum speed.
@@ -67,7 +67,7 @@ This model approximates the effects of a car sharing system in a 10 mile by 10 m
 
 \section{Matching Algorithms}
 
-Using the described carsharing model we want to determine how the assignment of vehicles to users affects the performance of the system. An easy way to handle the assignment problem would be to let users request the nearest vehicle to them on a first come first served basis. Unfortunately such simple approaches are not likely to be optimal in terms of the amount of waiting that users have or the number of trips that can be served. In addition, we would like to have a fair system in which some users are not waiting for long periods of time so that other users do not have to wait as long.
+Using the described carsharing model we want to determine how the assignment of vehicles to users affects the performance of the system. An easy way to handle the assignment problem would be to let users request the nearest vehicle to them on a first come first served basis. Unfortunately such simple approaches are not likely to be optimal in terms of the amount of waiting that users have or the number of trips that can be served. In addition, we would like to have a reliable system in which some users are not waiting for long periods of time so that other users do not have to wait as long.
 
 \begin{figure}
 \centering
@@ -82,7 +82,8 @@ Using the described carsharing model we want to determine how the assignment of 
 \draw [dashed,thick] (0.75,-0.5) -- (0.75,0.75) -- (-0.5,0.75);
 \node at (+0.75,-0.75) {T2};
 \end{tikzpicture}
-        \caption{Decentralized}
+\caption{Decentralized}
+\label{smallExampleA}
 \end{subfigure}
 ~
 \begin{subfigure}[t]{0.2\textwidth}
@@ -97,6 +98,7 @@ Using the described carsharing model we want to determine how the assignment of 
 \node at (+0.75,-0.75) {T2};
 \end{tikzpicture}
 \caption{Greedy}
+\label{smallExampleB}
 \end{subfigure}
 ~
 \begin{subfigure}[t]{0.2\textwidth}
@@ -110,6 +112,7 @@ Using the described carsharing model we want to determine how the assignment of 
 \node at (+1.25,-0.75) {T2};
 \end{tikzpicture}
 \caption{Greedy}
+\label{smallExampleC}
 \end{subfigure}
 ~
 \begin{subfigure}[t]{0.2\textwidth}
@@ -123,6 +126,7 @@ Using the described carsharing model we want to determine how the assignment of 
 \node at (+1.25,-0.75) {T2};
 \end{tikzpicture}
 \caption{Hungarian}
+\label{smallExampleD}
 \end{subfigure}
 ~
 \begin{subfigure}[t]{0.2\textwidth}
@@ -138,6 +142,7 @@ Using the described carsharing model we want to determine how the assignment of 
 \node at (+1.25,+0.75) {T2};
 \end{tikzpicture}
 \caption{Hungarian}
+\label{smallExampleE}
 \end{subfigure}
 ~
 \begin{subfigure}[t]{0.2\textwidth}
@@ -153,17 +158,18 @@ Using the described carsharing model we want to determine how the assignment of 
 \node at (+1.25,+0.75) {T2};
 \end{tikzpicture}
 \caption{Scram}
+\label{smallExampleF}
 \end{subfigure}
+
+\caption{These small examples illustrate some of the disadvantages of the different algorithms used in the experiments. For a fixed scenario along each row, the drawings on the left show a suboptimal solution with one algorithm and the drawings on the right show a better solution from a different algorithm. The bottom row shows how Scram minimizes the longest distance traveled but not the total distance traveled.} 
 \label{smallExampleFigure}
-\caption{These small examples illustrate some of the disadvantages of the different algorithms used in the experiments. For a fixed scenario along each row, the drawings on the left show a suboptimal solution with one algorithm and the drawings on the right show a better solution from a different algorithm. The bottom row shows how Scram minimizes the longest distance traveled but not the total distance traveled.}
 \end{figure}
 
 \paragraph{Decentralized Greedy Matching}
-Without a centralized trip-car assignment system trips would need to request the nearest vehicle, similar to how users of Uber or Lyft look for nearby vehicles. This decentralized method can be implemented as a greedy matching of trips to vehicles. In a random order, trips are assigned to the closest vehicle to them. If one is not available they are added to a wait list and will make requests at the next time step. We assume that passengers can request a vehicle from anywhere in the city. In practice this might be constrained to a local area to prevent cars from having to cross the entire city to reach a passenger. This would result in some passengers not receiving service due to no cars in the area. Figure \ref{exampleFigure} illustrates how this approach can result in inefficiencies.
-
+Without a centralized trip-car assignment system trips would need to request the nearest vehicle, similar to how users of Uber or Lyft look for nearby vehicles. This decentralized method can be implemented as a greedy matching of trips to vehicles. In a random order, trips are assigned to the closest vehicle to them. If one is not available they are added to a wait list and will make requests at the next time step. We assume that passengers can request a vehicle from anywhere in the city. In practice this might be constrained to a local area to prevent cars from having to cross the entire city to reach a passenger. This would result in some passengers not receiving service due to no cars in the area. Figure \ref{smallExampleA} and Figure \ref{smallExampleB}. illustrates how this approach can result in inefficiencies.
 
 \paragraph{Centralized Greedy Matching}
-To improve on the decentralized greedy approach we consider a centralized greedy approach. Each trip looks for a car within a one cell radius of itself. After all trips have made this search the radius is increased and trips search again. The advantage of this approach is that a vehicle will not be assigned to a passenger if it could have served another passenger in less time. The disadvantage is that there are no guarantees that the assignment will be optimal. Figure \ref{exampleFigure} gives a scenario where this approach fails to produce the optimal solution.
+To improve on the decentralized greedy approach we consider a centralized greedy approach. Each trip looks for a car within a one cell radius of itself. After all trips have made this search the radius is increased and trips search again. The advantage of this approach is that a vehicle will not be assigned to a passenger if it could have served another passenger in less time. The disadvantage is that there are no guarantees that the assignment will be optimal. Figures \ref{smallExampleC} and \ref{smallExampleD} gives a scenario where this approach fails to produce the optimal solution.
 
 This radius can either increase up to searching the entire city or terminate at a fixed limit (e.g. the distance a vehicle can travel in one time step).
 
@@ -171,7 +177,7 @@ This radius can either increase up to searching the entire city or terminate at 
 A natural improvement is the Hungarian algorithm \cite{kuhn1955hungarian} which finds a minimum cost perfect matching in a bipartite graph. The Hungarian algorithm can be implemented to run in time $O(n^3)$ which is fast enough to compute our car to passenger assignment in a few seconds. The input to the algorithm is a set of $n$ cars and $n$ trips and a distance metric to be minimized. Since we have an input of $n$ cars and $m$ trips we can create $|n-m|$ dummy passengers if $n > m$ or dummy cars if $m > n$. Setting the distance to a dummy car/passenger to zero results in the Hungarian algorithm returning the minimized distance for unequal $m$ and $n$ \cite{macalpine2015scram}.
 
 \paragraph{Minimal Makespan Matching}
-The Hungarian algorithm produces a minimum cost perfect matching but the optimal solution does not consider fairness of the system. In our scenario this equates to the possibility that some trips have a much longer wait time even though the total wait across all trips is minimized. To improve on this we use a scalable collision-avoiding role assignment with minimal-makespan (SCRAM) algorithm to find an assignment that minimizes the longest distance that any vehicle must travel to a passenger. Specifically we implement the Minimum Maximal Distance + Minimum Sum Distance$^2$ (MMD+MSD$^2$) proposed in \cite{macalpine2015scram}. Given a bipartite graph, $G = ({S,T},E)$  this algorithm first finds the minimum maximal edge in a perfect matching from $S$ to $T$. Then edges in $E$ with length larger than this edge are removed from the edge set. Finally, the Hungarian algorithm is ran on this reduced set of edges to find the minimum cost matching.  
+The Hungarian algorithm produces a minimum cost perfect matching but the optimal solution does not consider fairness of the system. In our scenario this equates to the possibility that some trips have a much longer wait time even though the total wait across all trips is minimized. To improve on this we use a scalable collision-avoiding role assignment with minimal-makespan (SCRAM) algorithm to find an assignment that minimizes the longest distance that any vehicle must travel to a passenger. Specifically we implement the Minimum Maximal Distance + Minimum Sum Distance$^2$ (MMD+MSD$^2$) proposed in \cite{macalpine2015scram}. Given a bipartite graph, $G = ({S,T},E)$  this algorithm first finds the minimum maximal edge in a perfect matching from $S$ to $T$. Then edges in $E$ with length larger than this edge are removed from the edge set. Finally, the Hungarian algorithm is ran on this reduced set of edges to find the minimum cost matching. Figures \ref{smallExampleF} shows the solution SCRAM would find in contrast to the minimum cost assignment shown in figure \ref{smallExampleE}. 
 
 \section{Experimental Setup}
 To compare different approaches we run two sets of experiments. The first set of experiments compares the performance of the above algorithms over 100 consecutive days of fleet use. Since each the events of each day affect the next, multiple days are needed to get an idea of system performance. In these experiments the fleet size is set to 1000 vehicles which was experimentally found to be able to serve all users with any method of assignment. It is important that all trips be served in order to make meaningful comparisons. This is because an assignment strategy could reduce average wait time by simply not serving passengers that would have to wait a long time. We run 50 trials of 100 days each for each method of assignment.
@@ -180,37 +186,36 @@ The second set of experiments compares the ability of different methods to serve
 
 \section{Results}
 
-This section presents and discusses the experimental results. Statistical significance is computed using a t-test for all results.
+This section presents and discusses the experimental results. Statistical significance is computed using a t-test for all results. Results show the tradeoffs between minimum-cost matching and minimal-makespan matching in this context. They also show significant improvement over a decentralized or simple greedy approach.
 
 \subsection{Unoccupied Miles Traveled}
 
 The first comparison we make is on the average amount of unoccupied vehicle miles per day. Unoccupied miles are necessary to reach passengers but also mean extra fuel costs and wear on vehicles that does not directly contribute to serving a trip. Figure \ref{unoccupiedGraph} shows the amount of miles traveled by vehicles with no passengers in them. The results show that both of the more sophisticated matching approaches are able to reduce this number by approximately 20 percent from the baseline approach. The Hungarian algorithm performs better than SCRAM. This is because the Hungarian algorithm is focused on minimizing the total while SCRAM spreads out the travel.  
 
 \begin{figure}
-%\resizebox {\columnwidth} {!} {
-%\begin{tikzpicture}
-%\begin{axis}[
-%	x tick label style={
-%	/pgf/number format/1000 sep=},
-%	ylabel=Average Unoccupied Distance (miles per day),
-	%symbolic x coords={0,Decentralized,Greedy,Hungarian,SCRAM},
-  %  xtick=data,
- %   enlarge y limits=0.01,
-%	enlarge x limits=0.15,
-%	legend style={at={(0.5,-0.1)},
-	%anchor=north,legend columns=-1},
-  %  ybar = 3pt,
- %   bar width=20pt
-%]
-%\addplot [fill=blue,error bars/.cd, y dir=both, y explicit,]
-%	coordinates {(Decentralized,18524.0803) += (0,31.4938344758) -= (0,31.4938344758) (Greedy,15479.34128) += (0,13.6964034878) -= (0,13.6964034878)
-%		 (SCRAM,14605.7718336) += (0,15.4548969092) -= (0,15.4548969092) (Hungarian,14344.3014) += (0,14.9256398871) -= (0,14.9256398871)};
-
-%\end{axis}
-%\end{tikzpicture}
-%}
-\label{unoccupiedGraph}
+\resizebox {\columnwidth} {!} {
+\begin{tikzpicture}
+\begin{axis}[
+	x tick label style={
+	/pgf/number format/1000 sep=},
+	ylabel=Average Unoccupied Distance (miles per day),
+	symbolic x coords={0,Decentralized,Greedy,Hungarian,SCRAM},
+    xtick=data,
+    enlarge y limits=0.01,
+	enlarge x limits=0.15,
+	legend style={at={(0.5,-0.1)},
+	anchor=north,legend columns=-1},
+    ybar = 3pt,
+    bar width=20pt
+]
+\addplot [fill=blue,error bars/.cd, y dir=both, y explicit,]
+	coordinates {(Decentralized,18524.0803) += (0,31.4938344758) -= (0,31.4938344758) (Greedy,15479.34128) += (0,13.6964034878) -= (0,13.6964034878)
+		 (SCRAM,14605.7718336) += (0,15.4548969092) -= (0,15.4548969092) (Hungarian,14344.3014) += (0,14.9256398871) -= (0,14.9256398871)};
+\end{axis}
+\end{tikzpicture}
+}
 \caption{This bar graph shows how different assignment methods result in different amounts of unoccupied travel. Error bars are for a 95$\%$ confidence level.}
+\label{unoccupiedGraph}
 \end{figure}
 
 \subsection{Passenger Wait Time}
@@ -219,142 +224,130 @@ The next point of comparison is passenger wait time. Wait time is a combination 
 $$Wait_{total} = Wait_{matching} + Wait_{travel} $$
 . For all methods the average wait was less than five minutes (i.e. on average all users could be assigned a vehicle the first time they requested one) which means the first term will be zero for most trips. This means that the average wait time is highly correlated with unoccupied miles traveled. 
 
-While a minimal average wait time is good, we also want the service to be reliable and predictable for all of the users. To characterize this, we look at variance in the wait time and the number of users that have to wait longer than certain time thresholds. Results are shown in Figure \ref{averageWaitVarianceGraph} and Figure \ref{averageWaitTimes}.
-
-(SCRAM results place holder for variance)
-
-Figure \ref{averageWaitTimes} shows that SCRAM is able to minimize the number of trips that must wait longer than each threshold. This comes from SCRAM's minimal-makespan property. SCRAM's solution has a slightly longer average wait than the Hungarian algorithm but less users are having longer waits. Unreliable service or long wait times are likely to cause users to abandon carsharing for more reliable sources of transportation such as private vehicles. If the system loses users it will lose revenue which may further decrease its capacities. This is why reliable service must be provided to all users.
+While a minimal average wait time is good, we also want the service to be reliable and predictable for all of the users. To characterize this, we look at variance in the wait time and the number of users that have to wait longer than certain time thresholds. Results are shown in Figure \ref{averageWaitVarianceGraph} and Figure \ref{averageWaitTimes}. First the variance results show that both the Hungarian algorithm and Scram reduce variance in the wait time. Scram outperforms the Hungarian method because minimizing the makespan results in a smaller range for which user-vehicle distances can fall. Figure \ref{averageWaitTimes} shows that SCRAM is able to minimize the number of trips that must wait longer than each threshold. This comes from SCRAM's minimal-makespan property. SCRAM's solution has a slightly longer average wait than the Hungarian algorithm but less users are having longer waits. Unreliable service or long wait times are likely to cause users to abandon carsharing for more reliable sources of transportation such as private vehicles. If the system loses users it will lose revenue which may further decrease its capacities. This is why reliable service must be provided to all users.
 
 \begin{figure}
-%\resizebox {\columnwidth} {!} {
-%\begin{tikzpicture}
-%\begin{axis}[
-%	x tick label style={
-%	/pgf/number format/1000 sep=},
-%	ylabel=Average Wait Time Variance,
-%	symbolic x coords={0,Decentralized,Greedy,Hungarian,SCRAM},
-%    xtick=data,
- %   enlarge y limits=0.01,
-%	enlarge x limits=0.15,
-%	legend style={at={(0.5,-0.1)},
-%	anchor=north,legend columns=-1},
-%	ybar interval=0.5,
- %   ybar = 3pt,
-%    bar width=20pt
-%]
-%\addplot [fill=red, error bars/.cd, y dir=both, y explicit]
-%	coordinates {(Decentralized,0) += (0,0) -= (0,0) (Greedy,0)
-%		 (SCRAM,0) (Hungarian,0)};
-
-%\end{axis}
-%\end{tikzpicture}
-%}
-\label{averageWaitVarianceGraph}
+\resizebox {\columnwidth} {!} {
+\begin{tikzpicture}
+\begin{axis}[
+	x tick label style={
+	/pgf/number format/1000 sep=},
+	ylabel=Average Wait Time Variance,
+	symbolic x coords={0,Decentralized,Greedy,Hungarian,SCRAM},
+    xtick=data,
+    enlarge y limits=0.01,
+	enlarge x limits=0.15,
+	legend style={at={(0.5,-0.1)},
+	anchor=north,legend columns=-1},
+	ybar interval=0.5,
+    ybar = 3pt,
+    bar width=20pt
+]
+\addplot [fill=red, error bars/.cd, y dir=both, y explicit]
+	coordinates {(Decentralized,4.12657) += (0,0.0256335429) -= (0,0.0256335429) (Greedy,3.421545178) += (0,0.0118211151) -= (0,0.0118211151) 
+		 (Hungarian,1.98288595) += (0,0.0064259937) -= (0,0.0064259937) (SCRAM,1.6660924676) += (0,0.0061273067) -= (0,0.0061273067)};
+\end{axis}
+\end{tikzpicture}
+}
 \caption{This bar graph shows how different assignment methods result in different amounts of variance within travel time. Error bars are for a 95$\%$ confidence level.}
+\label{averageWaitVarianceGraph}
 \end{figure}
 
 \begin{figure}
-%\resizebox {\columnwidth} {!} {
-%\begin{tikzpicture}
-%\begin{axis}[
-%	x tick label style={
-%	/pgf/string format/1000 sep=0pt anchor=east shift=-4pt},
-%	ylabel=Number of passengers,
-%	symbolic x coords={0,Five,Ten,Fifteen,D},
-%    xtick=data,
-%    enlarge y limits=0.01,
-%	enlarge x limits=0.15,
-%	legend style={at={(0.5,-0.1)},
-%	anchor=north,legend columns=-1},
-%	ybar interval=0.7,
-%    ybar = 1pt,
-%    bar width=15pt
-%]
+\resizebox {\columnwidth} {!} {
+\begin{tikzpicture}
+\begin{axis}[
+	x tick label style={
+	/pgf/number format/1000 sep=0pt anchor=east shift=-4pt},
+	ylabel=Number of passengers,
+	symbolic x coords={0,Five,Ten,Fifteen,D},
+    xtick=data,
+    enlarge y limits=0.01,
+	enlarge x limits=0.15,
+	legend style={at={(0.5,-0.1)},
+	anchor=north,legend columns=-1},
+	ybar interval=0.7,
+    ybar = 1pt,
+    bar width=15pt
+]
 %Decentralized
-%\addplot [pattern=north east lines,error bars/.cd, y dir=both, y explicit,]
-%	coordinates {(Five,2071.4542) += (0,14.3062459029) -= (0,14.3062459029) (Ten,390.5364) %+= (0,3.1325882223) -= (0,3.1325882223)
-%		 (Fifteen,130.0746) += (0,1.5169568583) -= (0,1.5169568583)};
-
+\addplot [pattern=north east lines,error bars/.cd, y dir=both, y explicit,]
+	coordinates {(Five,2071.4542) += (0,14.3062459029) -= (0,14.3062459029) (Ten,390.5364) += (0,3.1325882223) -= (0,3.1325882223)
+		 (Fifteen,130.0746) += (0,1.5169568583) -= (0,1.5169568583)};
 %Greedy
-%\addplot [pattern=dots, error bars/.cd, y dir=both, y explicit,]
-%	coordinates {(Five,1623.7748) += (0,4.4938187306) -= (0,4.4938187306) (Ten,353.9534) %+= (0,1.8198260124) -= (0,1.8198260124)
-%		 (Fifteen,78.5602) += (0,0.7429254263) -= (0,0.7429254263)};
-
+\addplot [pattern=dots, error bars/.cd, y dir=both, y explicit,]
+	coordinates {(Five,1623.7748) += (0,4.4938187306) -= (0,4.4938187306) (Ten,353.9534) += (0,1.8198260124) -= (0,1.8198260124)
+		 (Fifteen,78.5602) += (0,0.7429254263) -= (0,0.7429254263)};
 %Hungarian		 
-%\addplot [pattern=crosshatch, error bars/.cd, y dir=both, y explicit,]
-%	coordinates {(Five,974.4834) += (0,3.9463704624) -= (0,3.9463704624) (Ten,118.404) += %(0,0.95148793) -= (0,0.95148793)
-%		 (Fifteen,24.9586) += (0,0.4115085269) -= (0,0.4115085269)};
-
+\addplot [pattern=crosshatch, error bars/.cd, y dir=both, y explicit,]
+	coordinates {(Five,974.4834) += (0,3.9463704624) -= (0,3.9463704624) (Ten,118.404) += (0,0.95148793) -= (0,0.95148793)
+		 (Fifteen,24.9586) += (0,0.4115085269) -= (0,0.4115085269)};
 %SCRAM		 
-%\addplot [pattern=north west lines,error bars/.cd, y dir=both, y explicit,]
-%	coordinates {(Five,840.765467247) += (0,4.5148281834) -= (0,4.5148281834) %(Ten,26.095930545) += (0,0.5505090487) -= (0,0.5505090487)
-%		 (Fifteen,4.8304617135) += (0,0.1088751011) -= (0,0.1088751011)};
-
-%\end{axis}
-%\end{tikzpicture}
-%}
-\label{averageWaitTimes}
+\addplot [pattern=north west lines,error bars/.cd, y dir=both, y explicit,]
+	coordinates {(Five,840.765467247) += (0,4.5148281834) -= (0,4.5148281834) (Ten,26.095930545) += (0,0.5505090487) -= (0,0.5505090487)
+		 (Fifteen,4.8304617135) += (0,0.1088751011) -= (0,0.1088751011)};
+\end{axis}
+\end{tikzpicture}
+}
 \caption{This bar graph shows how different algorithms can match more of the trips sooner. Error bars are for a 95$\%$ confidence level.}
+\label{averageWaitTimes}
 \end{figure}
 
 \subsection{Sensitivity of Methods to Fleet Size}
 
+Our final experiment considers how different methods can scale down to smaller fleet sizes. The above results show that a fleet size of 1000 cars is enough to serve all the trips for a city similar to the model we have used. In the case of a fixed limit on the number of vehicles available, these experiments characterize how different matching algorithms perform. (Results still finishing)
+
 \begin{figure}
-%\resizebox {\columnwidth} {!} {
-%\begin{tikzpicture}
-%\begin{axis}[
-%	xlabel=Fleet Size,
-%	ylabel=Number of Unserved Trips]
-%\addplot[color=blue,mark=x, error bars/.cd, y dir=both, y explicit,] coordinates {
-%	(500,    100)
-%	(600,   90)
-%	(700,   80)
-%	(800,  70)
-%	(900,  60)
-%	(1000,  50)
-%};
-
-%\addplot[color=blue,mark=x,error bars/.cd, y dir=both, y explicit,] coordinates {
-%	(500,    90)
-%	(600,   80)
-%	(700,   70)
-%	(800,  60)
-%	(900,  50)
-%	(1000,  40)
-%};
-
-%\addplot[color=red,mark=*,error bars/.cd, y dir=both, y explicit,] coordinates {
-%	(500,    80)
-%	(600,   70)
-%	(700,   60)
-%	(800,  50)
-%	(900,  40)
-%	(1000,  30)
-%};
-
-%\addplot[color=red,mark=*,error bars/.cd, y dir=both, y explicit,] coordinates {
-%	(500,    70)
-%	(600,   60)
-%	(700,   50)
-%	(800,  40)
-%	(900,  30)
-%	(1000,  20)
-%};
-	
-
-%\legend{Decentralized, Greedy, Hungarian, SCRAM}
-%\end{axis}
-%\end{tikzpicture}
-%}
+\resizebox {\columnwidth} {!} {
+\begin{tikzpicture}
+\begin{axis}[
+	xlabel=Fleet Size,
+	ylabel=Number of Unserved Trips]
+\addplot[color=blue,mark=x, error bars/.cd, y dir=both, y explicit,] coordinates {
+	(500,    100)
+	(600,   90)
+	(700,   80)
+	(800,  70)
+	(900,  60)
+	(1000,  50)
+};
+\addplot[color=blue,mark=x,error bars/.cd, y dir=both, y explicit,] coordinates {
+	(500,    90)
+	(600,   80)
+	(700,   70)
+	(800,  60)
+	(900,  50)
+	(1000,  40)
+};
+\addplot[color=red,mark=*,error bars/.cd, y dir=both, y explicit,] coordinates {
+	(500,    80)
+	(600,   70)
+	(700,   60)
+	(800,  50)
+	(900,  40)
+	(1000,  30)
+};
+\addplot[color=red,mark=*,error bars/.cd, y dir=both, y explicit,] coordinates {
+	(500,    70)
+	(600,   60)
+	(700,   50)
+	(800,  40)
+	(900,  30)
+	(1000,  20)
+};
+\legend{Decentralized, Greedy, Hungarian, SCRAM}
+\end{axis}
+\end{tikzpicture}
+}
 \label{fleetSizeGraph}
 \caption{How fleet size affects the number of vehicles that can be served.}
 \end{figure}
 
 \section{Conclusion and Future Work}
 
-We have presented a comparison of different methods for assigning vehicles to users for a carsharing system using autonomous vehicles. Our experiments show that employing an optimal perfect matching algorithm can improve performance of a system in terms of wasted travel and customer service.
+We have presented a comparison of different methods for assigning vehicles to users for a carsharing system using autonomous vehicles. Our experiments show that employing an optimal perfect matching algorithm can improve performance of a system in terms of wasted travel and customer service. As expected, minimum cost matching reduces total wait and unoccupied miles traveled across the entire system. On the other hand, minimal-makespan algorithm with SCRAM reduces variance in the user wait time and reduces the number of users who have significant waits. We also evaluated two simpler approaches: one which models a decentralized approach where users reserve vehicles and one which models a simple
 
-The current approach is short sighted in that it only considers vehicles available at the time of assignment. Any of the assignment methods could be adapted to consider vehicles that will soon be available. This could be done by representing the vehicles distance to a passenger as the distance from the passenger to the vehicle destination plus the vehicles remaining distance to travel. In situations where the fleet size is limited this could allow the system to directly tell users if it will be possible to serve them and how long they have to wait. Another potential direction is ridesharing which may reduce to a vehicle routing problem.
+The current approach is short sighted in that it only considers vehicles available at the time of assignment. Any of the assignment methods could be adapted to consider vehicles that will soon be available. This could be done by representing the vehicles distance to a passenger as the distance from the passenger to the vehicle destination plus the vehicles remaining distance to travel. In situations where the fleet size is limited this could allow the system to directly tell users if it will be possible to serve them and how long they have to wait. Another potential direction is ridesharing which may reduce to a vehicle routing problem. Finally, a decentralized algorithm that could approximate the minimum cost or minimal-makespan matching would provide the same benefits presented in this paper but without the need for a centralized planner.
 
 \bibliography{CarSharing}
 \bibliographystyle{aaai}
