@@ -343,6 +343,25 @@ Our final experiment considers how different methods can scale down to smaller f
 \caption{How fleet size affects the number of vehicles that can be served.}
 \end{figure}
 
+\section{Incentive Compatibility}
+
+A drawback of the presented centralized systems is that users can improve their wait time by misreporting their location.
+
+\begin{figure}
+\centering
+\begin{tikzpicture}
+\centering
+\draw[step=0.5cm,color=gray] (-1.0,-1.0) grid (4.0,0.5);
+\node at (-0.75,+0.25) {C1};
+\node at (-1.25,+0.75) {T1};
+\node at (3.75,0.25) {C2};
+%\draw (-0.25,-0.75) ellipse (8mm and 3mm);
+\draw[dashed,thick] (-0.5,0.75) -- (1,0.75);
+\draw[dashed,thick] (-0.5,-0.25) -- (-1.25,-0.25) -- (-1.25,0.5);
+\node at (+1.25,+0.75) {T2};
+\end{tikzpicture}
+\end{figure}
+
 \section{Conclusion and Future Work}
 
 We have presented a comparison of different methods for assigning vehicles to users for a carsharing system using autonomous vehicles. Our experiments show that employing an optimal perfect matching algorithm can improve performance of a system in terms of wasted travel and customer service. As expected, minimum cost matching reduces total wait and unoccupied miles traveled across the entire system. On the other hand, minimal-makespan algorithm with SCRAM reduces variance in the user wait time and reduces the number of users who have significant waits. We also evaluated two simpler approaches: one which models a decentralized approach where users reserve vehicles and one which models a simple
